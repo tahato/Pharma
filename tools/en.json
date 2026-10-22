@@ -72,5 +72,20 @@
   "expiryAlert": "Expiry alerts",
   "daysValue": "{{count}} days",
   "lowStockThreshold": "Low stock threshold",
-  "logout": "Log out"
+  "logout": "Log out",
+  "delete": "Delete",
+  "scanHint": "Place the barcode inside the frame",
+  "openSettings": "Open settings",
+  "productNotFound": "Product not found",
+  "errRequired": "Required field",
+  "errNumber": "Enter a valid number",
+  "errPastDate": "This date has already passed",
+  "appTitle": "Pharmacy management",
+  "loginSubtitle": "Sign in to manage your stock and sales",
+  "registerSubtitle": "Create your account to manage your stock and sales",
+  "emailLabel": "E-mail address",
+  "emailPlaceholder": "Enter your e-mail",
+  "pswPlaceholder": "Enter your password",
+  "forgotPassword": "Forgot password?",
+  "footer": "Pharmacie. All rights reserved."
 }

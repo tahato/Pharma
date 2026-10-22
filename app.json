@@ -45,6 +45,12 @@
           "photosPermission": "Pharmacie needs access to your photos to attach product pictures.",
           "cameraPermission": "Pharmacie needs the camera to take product pictures."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Pharmacie needs the camera to scan product barcodes."
+        }
       ]
     ],
     "experiments": {

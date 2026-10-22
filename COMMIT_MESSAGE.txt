@@ -21,6 +21,9 @@ Screens (all on data/mock.js)
   product detail with batches, add product (camera or gallery photo),
   Vente cart with stepper and confirmation sheet, Historique with
   period filter, Réglages with language switch and logout
+- barcode scanning (expo-camera) in Stock, Vente and add-product
+- month/year expiry picker, swipe-to-remove cart rows, EmptyState,
+  inline validation errors in the add-product form
 - new 4-tab layout: Accueil, Stock, Vente, Historique
 - helpers in tools/stock.js (status, expiry, DA formatting)
 - rewritten fr/en translations with plural keys

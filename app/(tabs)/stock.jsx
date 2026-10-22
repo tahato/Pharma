@@ -2,12 +2,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import Chip from "@/components/Chip";
+import EmptyState from "@/components/EmptyState";
 import ProductRow from "@/components/ProductRow";
 import ScreenHeader from "@/components/ScreenHeader";
 import SearchBar from "@/components/SearchBar";
-import { colors, font, spacing } from "@/constants/theme";
+import { colors, spacing } from "@/constants/theme";
 import { products } from "@/data/mock";
 import { isExpiringSoon, stockStatus } from "@/tools/stock";
 
@@ -22,6 +24,7 @@ export default function Stock() {
   const params = useLocalSearchParams();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     if (params.filter) setFilter(params.filter);
@@ -57,6 +60,7 @@ export default function Stock() {
               value={query}
               onChangeText={setQuery}
               placeholder={t("searchProduct")}
+              onScan={() => setScanning(true)}
             />
             <View style={styles.chips}>
               {FILTERS.map((f) => (
@@ -70,7 +74,15 @@ export default function Stock() {
             </View>
           </View>
         }
-        ListEmptyComponent={<Text style={styles.empty}>{t("noResults")}</Text>}
+        ListEmptyComponent={<EmptyState title={t("noResults")} />}
+      />
+      <BarcodeScanner
+        visible={scanning}
+        onClose={() => setScanning(false)}
+        onScanned={(code) => {
+          setQuery(code);
+          setScanning(false);
+        }}
       />
       <Pressable style={styles.fab} onPress={() => router.push("/addProducts")}>
         <MaterialCommunityIcons name="plus" size={28} color={colors.onPrimary} />
@@ -84,12 +96,6 @@ const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: 96 },
   header: { gap: spacing.md, marginBottom: spacing.md },
   chips: { flexDirection: "row", gap: spacing.sm },
-  empty: {
-    textAlign: "center",
-    color: colors.textSecondary,
-    fontSize: font.body,
-    marginTop: spacing.xl,
-  },
   fab: {
     position: "absolute",
     right: spacing.lg,

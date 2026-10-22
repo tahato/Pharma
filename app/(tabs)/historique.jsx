@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import Card from "@/components/Card";
 import Chip from "@/components/Chip";
+import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
 import { colors, font, spacing } from "@/constants/theme";
 import { sales } from "@/data/mock";
@@ -48,7 +49,9 @@ export default function Historique() {
             </Text>
           </View>
         }
-        ListEmptyComponent={<Text style={styles.empty}>{t("noSales")}</Text>}
+        ListEmptyComponent={
+          <EmptyState icon="receipt-text-outline" title={t("noSales")} />
+        }
         renderItem={({ item }) => (
           <Card style={styles.row}>
             <View style={styles.icon}>
@@ -94,10 +97,4 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: font.body, fontWeight: "500", color: colors.text },
   muted: { fontSize: font.small, color: colors.textSecondary },
-  empty: {
-    textAlign: "center",
-    color: colors.textSecondary,
-    fontSize: font.body,
-    marginTop: spacing.xl,
-  },
 });

@@ -66,4 +66,6 @@ French default, English available, sentence case, verb-first buttons ("Encaisser
 ## Implementation status
 Done: tokens, shared components (`ScreenHeader`, `Button`, `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`), 4-tab layout, all 9 screens on mock data, light mode forced.
 
-Not done yet (needs later phases): barcode-scan buttons (stock search, add-product field, sales), date picker for expiry, swipe-to-remove in the cart (quantity 0 removes the line instead), sale detail screen, empty/loading/error states beyond the basic empty messages, dark mode (intentionally out of scope).
+Also done: barcode-scan buttons (stock search, add-product barcode field, sales), month/year expiry picker, swipe-to-remove in the cart, `EmptyState`, inline form errors.
+
+Not done yet: sale detail screen, loading and error states (arrive with the data layer), dark mode (intentionally out of scope).

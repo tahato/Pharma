@@ -1,5 +1,6 @@
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
@@ -24,6 +25,7 @@ const theme = {
 
 export default function RootLayout() {
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <ThemeProvider value={theme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
@@ -34,5 +36,6 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

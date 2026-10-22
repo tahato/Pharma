@@ -2,18 +2,25 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
 
+// onPress turns the field into a read-only button (e.g. opens a picker).
 export default function TextField({
   label,
   icon,
   onIconPress,
   leftIcon,
+  error,
+  onPress,
   style,
   ...inputProps
 }) {
+  const Field = onPress ? Pressable : View;
   return (
     <View style={[styles.wrapper, style]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <View style={styles.field}>
+      <Field
+        onPress={onPress}
+        style={[styles.field, error && { borderColor: colors.danger }]}
+      >
         {leftIcon && (
           <MaterialCommunityIcons
             name={leftIcon}
@@ -24,6 +31,8 @@ export default function TextField({
         <TextInput
           style={styles.input}
           placeholderTextColor={colors.textSecondary}
+          editable={!onPress}
+          pointerEvents={onPress ? "none" : "auto"}
           {...inputProps}
         />
         {icon && (
@@ -35,7 +44,8 @@ export default function TextField({
             />
           </Pressable>
         )}
-      </View>
+      </Field>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
@@ -60,4 +70,5 @@ const styles = StyleSheet.create({
     fontSize: font.body,
     paddingVertical: 0,
   },
+  error: { color: colors.danger, fontSize: font.small },
 });

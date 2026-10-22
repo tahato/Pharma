@@ -5,10 +5,10 @@ Mobile pharmacy management app (stock + point of sale). Expo / React Native, Fre
 ## Stack
 - Expo ~54, React Native 0.81, React 19, `expo-router` ~6 (file-based routing, typed routes, React Compiler enabled)
 - `react-i18next` + `i18next` (default `fr`, resources in `tools/fr.json`, `tools/en.json`)
-- `expo-image`, `expo-image-picker` + `expo-file-system/legacy` (product photos: camera or gallery), `@expo/vector-icons` (MaterialCommunityIcons everywhere)
+- `expo-camera` (barcode scanning), `expo-image`, `expo-image-picker` + `expo-file-system/legacy` (product photos: camera or gallery), `@expo/vector-icons` (MaterialCommunityIcons everywhere)
 - Styling: plain `StyleSheet` with tokens from `constants/theme.ts`. No NativeWind, so do not use `className`. Light mode only (`userInterfaceStyle: "light"`).
 - Path alias `@/*` -> project root (`tsconfig.json`). Screens and components are `.jsx`; the tabs layout and theme are `.ts(x)`.
-- Planned: Supabase (`@supabase/supabase-js`), TanStack Query, `expo-camera` for barcode scanning, a date picker for expiry.
+- Planned: Supabase (`@supabase/supabase-js`) and TanStack Query.
 
 ## Commands
 ```bash
@@ -25,13 +25,13 @@ npx tsc --noEmit        # must stay clean
 | `app/(auth)/login.jsx`, `register.jsx` | Render `<Form screen="login\|register">` |
 | `app/(tabs)/_layout.tsx` | 4 bottom tabs: `index` (Accueil), `stock`, `vente`, `historique` |
 | `app/(tabs)/index.jsx` | Dashboard: today's sales, low-stock and expiring counters (tap -> filtered Stock), "À surveiller" list, avatar -> settings |
-| `app/(tabs)/stock.jsx` | Search + filter chips (Tous / Stock bas / Expire, also set via `?filter=` param), `ProductRow` list, FAB -> `/addProducts` |
-| `app/(tabs)/vente.jsx` | Cart with search-to-add, `Stepper` (0 removes the line), bottom total bar, confirmation bottom sheet (`Modal`) |
+| `app/(tabs)/stock.jsx` | Search (+ barcode scan) + filter chips (Tous / Stock bas / Expire, also set via `?filter=` param), `ProductRow` list, FAB -> `/addProducts` |
+| `app/(tabs)/vente.jsx` | Cart with search or barcode scan to add, swipe-to-remove, `Stepper` (0 also removes the line), bottom total bar, confirmation bottom sheet (`Modal`) |
 | `app/(tabs)/historique.jsx` | Sales history with period chips and period total |
 | `app/medicins.jsx` | Product detail (`?id=`): quantity + status, details card, batches with expiry badges, Ajouter / Déstocker |
-| `app/addProducts.jsx` | New-product form; photo from camera or gallery (copied to app documents) |
+| `app/addProducts.jsx` | New-product form with validation, barcode scan, month/year expiry picker; photo from camera or gallery (copied to app documents) |
 | `app/settings.jsx` | Profile, language toggle (fr/en), alert settings (display only), logout -> login |
-| `components/` | `ScreenHeader`, `Button`, `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `Form` |
+| `components/` | `ScreenHeader`, `Button`, `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `BarcodeScanner`, `MonthYearPicker`, `Form` |
 | `constants/theme.ts` | Design tokens: `colors`, `spacing`, `radius`, `font`, `hairline` |
 | `data/mock.js` | Placeholder `products` (with batches), `sales`, `user`, `findProduct` |
 | `tools/stock.js` | `stockStatus`, expiry helpers, `EXPIRY_ALERT_DAYS` (30), `formatDA`, `formatExpiry` |
@@ -44,12 +44,11 @@ npx tsc --noEmit        # must stay clean
 - A **product** is a kind of medicine; a **batch** is a delivery with its own quantity and expiry date. Product quantity = sum of its batches.
 
 ## Current state (what is real vs placeholder)
-- Real UI behaviour on mock data: navigation, search and filters, cart add/remove/quantity, sale confirmation sheet (clears the cart only), period filter on history, language switch, photo picking.
-- Not wired yet:
+- Real UI behaviour on mock data: navigation, barcode scanning (needs a camera; test on a device), swipe-to-remove, add-product validation, search and filters, cart add/remove/quantity, sale confirmation sheet (clears the cart only), period filter on history, language switch, photo picking.
+- Not wired yet (needs the backend):
   - `Form` submit is an empty stub, with no auth guard (the app opens on Accueil).
   - "Enregistrer" in add-product, "Ajouter" / "Déstocker" in the detail screen, and the sale confirmation do not persist anything.
   - Settings thresholds are display only.
-  - No barcode scanning yet; the expiry field is plain text (MM/AAAA).
 - Mock expiry dates are generated relative to today, so the "expiring soon" counters always show demo data.
 
 ## Conventions

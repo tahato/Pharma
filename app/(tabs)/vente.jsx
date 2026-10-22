@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -9,8 +10,11 @@ import {
   Text,
   View,
 } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import EmptyState from "@/components/EmptyState";
 import ScreenHeader from "@/components/ScreenHeader";
 import SearchBar from "@/components/SearchBar";
 import Stepper from "@/components/Stepper";
@@ -29,6 +33,7 @@ export default function Vente() {
     { id: "4", qty: 3 },
   ]);
   const [confirming, setConfirming] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const q = query.trim().toLowerCase();
   const results = q
@@ -40,10 +45,22 @@ export default function Vente() {
   const addToCart = (id) => {
     setCart((c) =>
       c.some((l) => l.id === id)
-        ? c.map((l) => (l.id === id ? { ...l, qty: l.qty + 1 } : l))
+        ? c.map((l) => (l.id === id ? { ...l, qty: Math.min(l.qty + 1, byId(id).qty) } : l))
         : [...c, { id, qty: 1 }],
     );
     setQuery("");
+  };
+
+  const handleScan = (code) => {
+    setScanning(false);
+    const product = products.find((p) => p.barcode === code);
+    if (!product) {
+      Alert.alert(t("productNotFound"), code);
+    } else if (product.qty <= 0) {
+      Alert.alert(product.name, t("outOfStock"));
+    } else {
+      addToCart(product.id);
+    }
   };
 
   // Setting the quantity to 0 removes the line.
@@ -68,6 +85,7 @@ export default function Vente() {
           value={query}
           onChangeText={setQuery}
           placeholder={t("addProductSearch")}
+          onScan={() => setScanning(true)}
         />
         {results.map((p) => (
           <Pressable key={p.id} style={styles.result} onPress={() => addToCart(p.id)}>
@@ -77,26 +95,40 @@ export default function Vente() {
         ))}
 
         {cart.length === 0 && (
-          <View style={styles.empty}>
-            <MaterialCommunityIcons name="cart-outline" size={40} color={colors.textSecondary} />
-            <Text style={styles.emptyTitle}>{t("emptyCart")}</Text>
-            <Text style={styles.price}>{t("emptyCartBody")}</Text>
-          </View>
+          <EmptyState
+            icon="cart-outline"
+            title={t("emptyCart")}
+            body={t("emptyCartBody")}
+          />
         )}
 
         {cart.map((line) => {
           const p = byId(line.id);
           return (
-            <Card key={line.id} style={styles.line}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{p.name}</Text>
-                <Text style={styles.price}>{formatDA(p.ppa)}</Text>
-              </View>
-              <Stepper
-                value={line.qty}
-                onChange={(v) => setQty(line.id, Math.min(v, p.qty))}
-              />
-            </Card>
+            <ReanimatedSwipeable
+              key={line.id}
+              overshootRight={false}
+              renderRightActions={() => (
+                <Pressable
+                  style={styles.remove}
+                  onPress={() => setQty(line.id, 0)}
+                >
+                  <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.onPrimary} />
+                  <Text style={styles.removeText}>{t("delete")}</Text>
+                </Pressable>
+              )}
+            >
+              <Card style={styles.line}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{p.name}</Text>
+                  <Text style={styles.price}>{formatDA(p.ppa)}</Text>
+                </View>
+                <Stepper
+                  value={line.qty}
+                  onChange={(v) => setQty(line.id, Math.min(v, p.qty))}
+                />
+              </Card>
+            </ReanimatedSwipeable>
           );
         })}
       </ScrollView>
@@ -110,6 +142,12 @@ export default function Vente() {
           <Button title={t("checkout")} onPress={() => setConfirming(true)} />
         </View>
       )}
+
+      <BarcodeScanner
+        visible={scanning}
+        onClose={() => setScanning(false)}
+        onScanned={handleScan}
+      />
 
       <Modal
         transparent
@@ -167,10 +205,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
+  remove: {
+    width: 80,
+    marginLeft: spacing.sm,
+    backgroundColor: colors.danger,
+    borderRadius: radius.card,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  removeText: { color: colors.onPrimary, fontSize: font.caption },
   name: { fontSize: font.body, fontWeight: "500", color: colors.text },
   price: { fontSize: font.small, color: colors.textSecondary },
-  empty: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl },
-  emptyTitle: { fontSize: font.title, fontWeight: "500", color: colors.text },
   bottom: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,

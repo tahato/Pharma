@@ -72,5 +72,20 @@
   "expiryAlert": "Alertes de péremption",
   "daysValue": "{{count}} jours",
   "lowStockThreshold": "Seuil de stock bas",
-  "logout": "Se déconnecter"
+  "logout": "Se déconnecter",
+  "delete": "Supprimer",
+  "scanHint": "Placez le code barre dans le cadre",
+  "openSettings": "Ouvrir les réglages",
+  "productNotFound": "Produit introuvable",
+  "errRequired": "Champ obligatoire",
+  "errNumber": "Entrez un nombre valide",
+  "errPastDate": "Cette date est déjà passée",
+  "appTitle": "Gestion de pharmacie",
+  "loginSubtitle": "Connectez-vous pour gérer votre stock et vos ventes",
+  "registerSubtitle": "Créez votre compte pour gérer votre stock et vos ventes",
+  "emailLabel": "Adresse e-mail",
+  "emailPlaceholder": "Saisissez votre e-mail",
+  "pswPlaceholder": "Saisissez votre mot de passe",
+  "forgotPassword": "Mot de passe oublié ?",
+  "footer": "Pharmacie. Tous droits réservés."
 }
