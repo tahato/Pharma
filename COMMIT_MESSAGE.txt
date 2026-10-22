@@ -1,0 +1,31 @@
+Phase 0 + blue-teal redesign on mock data
+
+Clean up the prototype and rebuild the UI with a consistent clinical
+blue-teal design system. Backend is still placeholder data.
+
+Cleanup
+- fix missing haptic-tab import, uninstalled vector-icons package and
+  never-loaded i18n; add i18next dependency, fix fallbackLng
+- remove className (NativeWind) usage, unused template files, hooks,
+  react-logo assets, reset-project script, old photo backgrounds
+- PascalCase screen components so hooks lint passes
+
+Design system
+- constants/theme.ts tokens (colors, spacing, radius, font); light only
+- shared components: ScreenHeader, Button, Card, Badge, Chip, TextField,
+  SearchBar, Stepper, ProductRow, DetailField
+- icons unified on MaterialCommunityIcons
+
+Screens (all on data/mock.js)
+- login/register, Accueil dashboard, Stock (search, filters, FAB),
+  product detail with batches, add product (camera or gallery photo),
+  Vente cart with stepper and confirmation sheet, Historique with
+  period filter, Réglages with language switch and logout
+- new 4-tab layout: Accueil, Stock, Vente, Historique
+- helpers in tools/stock.js (status, expiry, DA formatting)
+- rewritten fr/en translations with plural keys
+
+Docs
+- add CLAUDE.md (app context) and DESIGN.md (design context)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>

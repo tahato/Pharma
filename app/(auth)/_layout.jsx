@@ -1,7 +1,6 @@
 import { Stack } from 'expo-router'
-import { StyleSheet } from 'react-native'
 
-export default function _layout() {
+export default function AuthLayout() {
     return (
         <Stack>
             <Stack.Screen name="register" options={{ headerShown: false }} />
@@ -9,5 +8,3 @@ export default function _layout() {
         </Stack>
     )
 }
-
-const styles = StyleSheet.create({})

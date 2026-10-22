@@ -1,58 +1,44 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { colors } from '@/constants/theme';
+
+type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+
+const TABS: { name: string; title: string; icon: IconName }[] = [
+  { name: 'index', title: 'home', icon: 'view-dashboard-outline' },
+  { name: 'stock', title: 'stock', icon: 'package-variant-closed' },
+  { name: 'vente', title: 'sales', icon: 'cart-outline' },
+  { name: 'historique', title: 'history', icon: 'history' },
+];
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { t } = useTranslation();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
-        // tabBarButton: HapticTab,
-        // tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: "absolute",
-          },
-          default: {},
-        }),
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarLabelStyle: { fontSize: 11 },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
       }}
     >
-      <Tabs.Screen
-        name="stock"
-        options={{
-          title: "Stocke",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="paperplane.fill" color={color} />
-          ),
-        }}
-      />
-      {/* <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      /> */}
-      <Tabs.Screen
-        name="vente"
-        options={{
-          title: "vente",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="point-of-sale" size={28} color={color} />
-          ),
-          // <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
+      {TABS.map(({ name, title, icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title: t(title),
+            tabBarIcon: ({ color }) => (
+              <MaterialCommunityIcons name={icon} size={24} color={color} />
+            ),
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

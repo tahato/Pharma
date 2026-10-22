@@ -1,71 +1,105 @@
-import { ImageBackground } from "expo-image";
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import MedecineCard from "../../components/MedecineCard";
-import SearchInput from "../../components/SearchInput";
-import images from "../../constants/images";
-import { router } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import Chip from "@/components/Chip";
+import ProductRow from "@/components/ProductRow";
+import ScreenHeader from "@/components/ScreenHeader";
+import SearchBar from "@/components/SearchBar";
+import { colors, font, spacing } from "@/constants/theme";
+import { products } from "@/data/mock";
+import { isExpiringSoon, stockStatus } from "@/tools/stock";
 
-export default function stock() {
+const FILTERS = [
+  { key: "all", label: "filterAll" },
+  { key: "low", label: "filterLow" },
+  { key: "expiring", label: "filterExpiring" },
+];
+
+export default function Stock() {
+  const { t } = useTranslation();
+  const params = useLocalSearchParams();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    if (params.filter) setFilter(params.filter);
+  }, [params.filter]);
+
+  const q = query.trim().toLowerCase();
+  const data = products.filter((p) => {
+    if (filter === "low" && stockStatus(p) === "ok") return false;
+    if (filter === "expiring" && !isExpiringSoon(p)) return false;
+    return !q || p.name.toLowerCase().includes(q) || p.barcode.includes(q);
+  });
+
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-      <ImageBackground
-        source={images.identifier}
-        contentFit="cover"
-        style={{ flex: 1, position: "relative", backgroundColor: "#f0f0f0" }}
-      >
-        <Text style={styles.title}> Stock </Text>
-
-        <FlatList
-          className=" h-full"
-          data={[1, 2, 3]}
-          // keyExtractor={}
-          renderItem={() => <MedecineCard />}
-          ListHeaderComponent={() => (
-            <View style={styles.headerContainer}>
-              <SearchInput />
-              <TouchableOpacity
-              style={styles.button}
-                onPress={() => router.push("/addProducts")}
-              >
-                <Text style={{color:'white',fontSize:22,fontWeight:'bold'}} >+</Text>
-              </TouchableOpacity>
+    <View style={styles.screen}>
+      <ScreenHeader title={t("stock")} />
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ProductRow
+            product={item}
+            onPress={() =>
+              router.push({ pathname: "/medicins", params: { id: item.id } })
+            }
+          />
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <SearchBar
+              value={query}
+              onChangeText={setQuery}
+              placeholder={t("searchProduct")}
+            />
+            <View style={styles.chips}>
+              {FILTERS.map((f) => (
+                <Chip
+                  key={f.key}
+                  label={t(f.label)}
+                  selected={filter === f.key}
+                  onPress={() => setFilter(f.key)}
+                />
+              ))}
             </View>
-          )}
-        />
-      </ImageBackground>
-    </SafeAreaView>
+          </View>
+        }
+        ListEmptyComponent={<Text style={styles.empty}>{t("noResults")}</Text>}
+      />
+      <Pressable style={styles.fab} onPress={() => router.push("/addProducts")}>
+        <MaterialCommunityIcons name="plus" size={28} color={colors.onPrimary} />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    padding:5,
-    marginBottom:10
-  },
-  title: {
-    fontWeight: "bold",
-    fontSize: 20,
+  screen: { flex: 1, backgroundColor: colors.background },
+  list: { padding: spacing.lg, paddingBottom: 96 },
+  header: { gap: spacing.md, marginBottom: spacing.md },
+  chips: { flexDirection: "row", gap: spacing.sm },
+  empty: {
     textAlign: "center",
-    margin: 10,
+    color: colors.textSecondary,
+    fontSize: font.body,
+    marginTop: spacing.xl,
   },
-  button: {
-    height: 30,
-    width: 30,
-    display:'flex',
-    backgroundColor: "blue",
-    justifyContent: "center",
+  fab: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
     alignItems: "center",
-    borderRadius:'100%'
+    justifyContent: "center",
+    elevation: 4,
   },
 });

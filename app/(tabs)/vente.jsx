@@ -1,122 +1,207 @@
-import { ImageBackground } from "expo-image";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import SearchInput from "../../components/SearchInput";
-import images from "../../constants/images";
+import { useTranslation } from "react-i18next";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Button from "@/components/Button";
+import Card from "@/components/Card";
+import ScreenHeader from "@/components/ScreenHeader";
+import SearchBar from "@/components/SearchBar";
+import Stepper from "@/components/Stepper";
+import { colors, font, hairline, radius, spacing } from "@/constants/theme";
+import { products } from "@/data/mock";
+import { formatDA } from "@/tools/stock";
 
-export default function vente() {
-  const [visible, seVisible] = useState(false);
-  const table = [1, 2, 3];
+const byId = (id) => products.find((p) => p.id === id);
+
+export default function Vente() {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const [cart, setCart] = useState([
+    { id: "1", qty: 2 },
+    { id: "2", qty: 1 },
+    { id: "4", qty: 3 },
+  ]);
+  const [confirming, setConfirming] = useState(false);
+
+  const q = query.trim().toLowerCase();
+  const results = q
+    ? products
+        .filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
+        .slice(0, 5)
+    : [];
+
+  const addToCart = (id) => {
+    setCart((c) =>
+      c.some((l) => l.id === id)
+        ? c.map((l) => (l.id === id ? { ...l, qty: l.qty + 1 } : l))
+        : [...c, { id, qty: 1 }],
+    );
+    setQuery("");
+  };
+
+  // Setting the quantity to 0 removes the line.
+  const setQty = (id, qty) =>
+    setCart((c) =>
+      qty <= 0
+        ? c.filter((l) => l.id !== id)
+        : c.map((l) => (l.id === id ? { ...l, qty } : l)),
+    );
+
+  const count = cart.reduce((sum, l) => sum + l.qty, 0);
+  const total = cart.reduce((sum, l) => sum + l.qty * byId(l.id).ppa, 0);
+
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-      <ImageBackground
-        className="relative"
-        source={images.identifier}
-        contentFit="cover"
-        style={{ flex: 1, position: "relative", backgroundColor: "#f0f0f0" }}
+    <View style={styles.screen}>
+      <ScreenHeader title={t("sales")} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={{ marginTop: 20 }}>
-          <SearchInput />
-          <View style={{ marginTop: 10 }}>
-            <View style={[styles.row, { backgroundColor: "white" }]}>
-              <Text style={{ flex: 1 }}>Produit</Text>
-              <View style={styles.rightRow}>
-                <Text>Prix</Text>
-                <Text style={{ width: "50%" }}>Quantitée</Text>
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          placeholder={t("addProductSearch")}
+        />
+        {results.map((p) => (
+          <Pressable key={p.id} style={styles.result} onPress={() => addToCart(p.id)}>
+            <Text style={styles.name}>{p.name}</Text>
+            <Text style={styles.price}>{formatDA(p.ppa)}</Text>
+          </Pressable>
+        ))}
+
+        {cart.length === 0 && (
+          <View style={styles.empty}>
+            <MaterialCommunityIcons name="cart-outline" size={40} color={colors.textSecondary} />
+            <Text style={styles.emptyTitle}>{t("emptyCart")}</Text>
+            <Text style={styles.price}>{t("emptyCartBody")}</Text>
+          </View>
+        )}
+
+        {cart.map((line) => {
+          const p = byId(line.id);
+          return (
+            <Card key={line.id} style={styles.line}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>{p.name}</Text>
+                <Text style={styles.price}>{formatDA(p.ppa)}</Text>
               </View>
-            </View>
-            {table.map((i) => (
-              <TouchableOpacity
-                onLongPress={() => seVisible(true)}
-                key={i}
-                style={[
-                  styles.row,
-                  { backgroundColor: i % 2 == 0 ? "white" : "lightgray" },
-                ]}
-              >
-                <Text style={{ flex: 1 }}>{i}</Text>
-                <View style={styles.rightRow}>
-                  <Text>120</Text>
-                  <Text style={{ width: "50%" }}> 2</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+              <Stepper
+                value={line.qty}
+                onChange={(v) => setQty(line.id, Math.min(v, p.qty))}
+              />
+            </Card>
+          );
+        })}
+      </ScrollView>
+
+      {cart.length > 0 && (
+        <View style={styles.bottom}>
+          <View style={styles.totalRow}>
+            <Text style={styles.price}>{t("items", { count })}</Text>
+            <Text style={styles.total}>{formatDA(total)}</Text>
           </View>
+          <Button title={t("checkout")} onPress={() => setConfirming(true)} />
         </View>
-        <View style={styles.total}>
-          <View className="flex-row ">
-            {/* <Text className="text-white text-2xl font-bold">Total: </Text> */}
-            <Text style={{ color: "#00FF00", fontSize: 16, fontWeight: "bold",padding:5 }}>
-              720.00 DA
-            </Text>
-          </View>
-          <View className="flex-row ">
-            {/* <Text className="text-white text-lg font-semibold">Quantité: </Text> */}
-            <Text style={{ color: "#00FF00", fontSize: 16, fontWeight: "bold",padding:5 }}>
-              {" "}
-              X 06
-            </Text>
-          </View>
-        </View>
-        <Modal transparent={true} visible={visible} animationType="slide">
-          <View className="flex-1 bg-transparent justify-center items-center">
-            <View className="bg-white flex-col p-10 gap-5 w-[90%] rounded-xl items-center">
-              {/* <Text>logoutMsg</Text> */}
-              <View className="flex-row  justify-between w-[80%]">
-                <TouchableOpacity
-                  className="rounded-full p-5"
-                  onPress={() => {
-                    seVisible(false);
-                  }}
-                  activeOpacity={1}
-                >
-                  <Text>Dlete</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={1}
-                  className="p-5 rounded-full"
-                >
-                  <Text>Edit</Text>
-                </TouchableOpacity>
-              </View>
+      )}
+
+      <Modal
+        transparent
+        visible={confirming}
+        animationType="slide"
+        onRequestClose={() => setConfirming(false)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setConfirming(false)} />
+        <View style={styles.sheet}>
+          <View style={styles.handle} />
+          <Text style={styles.sheetTitle}>{t("confirmSale")}</Text>
+          {cart.map((l) => (
+            <View key={l.id} style={styles.sheetRow}>
+              <Text style={styles.name}>
+                {byId(l.id).name} x{l.qty}
+              </Text>
+              <Text style={styles.name}>{formatDA(l.qty * byId(l.id).ppa)}</Text>
             </View>
+          ))}
+          <View style={styles.sheetRow}>
+            <Text style={styles.sheetTotal}>{t("total")}</Text>
+            <Text style={styles.sheetTotal}>{formatDA(total)}</Text>
           </View>
-        </Modal>
-      </ImageBackground>
-    </SafeAreaView>
+          <Button
+            title={t("confirm")}
+            onPress={() => {
+              setCart([]);
+              setConfirming(false);
+            }}
+          />
+          <Button
+            title={t("cancel")}
+            variant="secondary"
+            onPress={() => setConfirming(false)}
+          />
+        </View>
+      </Modal>
+    </View>
   );
 }
 
-//  <Text className="flex-1 border-r-2  border-gray-500">
-
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    width: "100%",
-    gap: 5,
-    padding: 5,
-    paddingHorizontal: 10,
-    alignContent: "center",
-  },
-
-  rightRow: {
-    display: "flex",
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, gap: spacing.sm },
+  result: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "50%",
+    padding: spacing.md,
+    backgroundColor: colors.primaryTint,
+    borderRadius: radius.input,
   },
-  total: {
-    backgroundColor: "black",
-    borderColor: "#50C878",
-    borderWidth: 2,
-    // borderRadius: 50,
-    position: "absolute",
-    bottom: 5,
-    right: 4,
-    alignItems: "flex-end",
-    paddingHorizontal: 20,
-    paddingVertical: 5,
+  line: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
   },
-  totalText: {},
+  name: { fontSize: font.body, fontWeight: "500", color: colors.text },
+  price: { fontSize: font.small, color: colors.textSecondary },
+  empty: { alignItems: "center", gap: spacing.sm, marginTop: spacing.xl },
+  emptyTitle: { fontSize: font.title, fontWeight: "500", color: colors.text },
+  bottom: {
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: hairline,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  total: { fontSize: 18, fontWeight: "500", color: colors.text },
+  backdrop: { flex: 1, backgroundColor: colors.overlay },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.inputBorder,
+    alignSelf: "center",
+    marginBottom: spacing.sm,
+  },
+  sheetTitle: { fontSize: font.title, fontWeight: "500", color: colors.text },
+  sheetRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: spacing.xs,
+  },
+  sheetTotal: { fontSize: 14, fontWeight: "500", color: colors.text },
 });
