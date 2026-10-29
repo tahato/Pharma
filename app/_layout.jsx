@@ -1,4 +1,5 @@
 import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -7,6 +8,7 @@ import "react-native-reanimated";
 
 import "@/tools/i18next";
 import { colors } from "@/constants/theme";
+import { queryClient } from "@/lib/queryClient";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -26,6 +28,7 @@ const theme = {
 
 export default function RootLayout() {
   return (
+    <QueryClientProvider client={queryClient}>
     <KeyboardProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
     <ThemeProvider value={theme}>
@@ -40,5 +43,6 @@ export default function RootLayout() {
     </ThemeProvider>
     </GestureHandlerRootView>
     </KeyboardProvider>
+    </QueryClientProvider>
   );
 }
