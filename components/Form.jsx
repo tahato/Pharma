@@ -3,16 +3,10 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "@/components/Button";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
 import TextField from "@/components/TextField";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
 
@@ -31,15 +25,14 @@ export default function Form({ screen }) {
   const eye = showPassword ? "eye-off-outline" : "eye-outline";
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={styles.screen}>
       <StatusBar style="dark" />
-      <ScrollView
+      {/* Fixed inset: the form scrolls below it, never under the status bar. */}
+      <View style={{ height: insets.top }} />
+      <KeyboardScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + spacing.xl * 2, paddingBottom: insets.bottom + spacing.xl },
+          { paddingTop: spacing.xl * 2, paddingBottom: insets.bottom + spacing.xl },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -111,8 +104,8 @@ export default function Form({ screen }) {
           {isRegister ? t("haveAccount") : t("noAccount")}
         </Text>
         <Text style={styles.footer}>{t("footer")}</Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardScrollView>
+    </View>
   );
 }
 

@@ -5,16 +5,10 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import Button from "@/components/Button";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
 import MonthYearPicker from "@/components/MonthYearPicker";
 import ScreenHeader from "@/components/ScreenHeader";
 import TextField from "@/components/TextField";
@@ -103,16 +97,13 @@ export default function AddProducts() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <View style={styles.screen}>
       <ScreenHeader
         title={t("newProduct")}
         backIcon="close"
         onBack={() => router.back()}
       />
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
@@ -155,7 +146,7 @@ export default function AddProducts() {
         </View>
 
         <Button title={t("save")} onPress={save} style={styles.save} />
-      </ScrollView>
+      </KeyboardScrollView>
 
       <BarcodeScanner
         visible={scanning}
@@ -171,7 +162,7 @@ export default function AddProducts() {
         onChange={(iso) => update("expiry", iso)}
         onClose={() => setPickingDate(false)}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

@@ -5,7 +5,6 @@ import {
   Alert,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -15,6 +14,7 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
+import KeyboardScrollView from "@/components/KeyboardScrollView";
 import ScreenHeader from "@/components/ScreenHeader";
 import SearchBar from "@/components/SearchBar";
 import Stepper from "@/components/Stepper";
@@ -77,7 +77,7 @@ export default function Vente() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title={t("sales")} />
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
@@ -131,7 +131,7 @@ export default function Vente() {
             </ReanimatedSwipeable>
           );
         })}
-      </ScrollView>
+      </KeyboardScrollView>
 
       {cart.length > 0 && (
         <View style={styles.bottom}>

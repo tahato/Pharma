@@ -8,6 +8,7 @@ Mobile pharmacy management app (stock + point of sale). Expo / React Native, Fre
 - `expo-camera` (barcode scanning), `expo-image`, `expo-image-picker` + `expo-file-system/legacy` (product photos: camera or gallery), `@expo/vector-icons` (MaterialCommunityIcons everywhere)
 - Styling: plain `StyleSheet` with tokens from `constants/theme.ts`. No NativeWind, so do not use `className`. Light mode only (`userInterfaceStyle: "light"`).
 - Path alias `@/*` -> project root (`tsconfig.json`). Screens and components are `.jsx`; the tabs layout and theme are `.ts(x)`.
+- Keyboard: `react-native-keyboard-controller` 1.18.5 with a patch (`patches/`, applied by `patch-package` in `postinstall`). Needs a native rebuild (not Expo Go).
 - Planned: Supabase (`@supabase/supabase-js`) and TanStack Query.
 
 ## Commands
@@ -31,7 +32,7 @@ npx tsc --noEmit        # must stay clean
 | `app/medicins.jsx` | Product detail (`?id=`): quantity + status, details card, batches with expiry badges, Ajouter / Déstocker |
 | `app/addProducts.jsx` | New-product form with validation, barcode scan, month/year expiry picker; photo from camera or gallery (copied to app documents) |
 | `app/settings.jsx` | Profile, language toggle (fr/en), alert settings (display only), logout -> login |
-| `components/` | `ScreenHeader`, `Button`, `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `BarcodeScanner`, `MonthYearPicker`, `Form` |
+| `components/` | `KeyboardScrollView`, `ScreenHeader`, `Button`, `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `BarcodeScanner`, `MonthYearPicker`, `Form` |
 | `constants/theme.ts` | Design tokens: `colors`, `spacing`, `radius`, `font`, `hairline` |
 | `data/mock.js` | Placeholder `products` (with batches), `sales`, `user`, `findProduct` |
 | `tools/stock.js` | `stockStatus`, expiry helpers, `EXPIRY_ALERT_DAYS` (30), `formatDA`, `formatExpiry` |
@@ -73,5 +74,6 @@ npx tsc --noEmit        # must stay clean
 9. Hardening and tests; 10. optional offline; 11. EAS release
 
 ## Rules
+- Android is edge-to-edge, so the keyboard does not resize the window. Any screen with text fields must use `components/KeyboardScrollView` (never `ScrollView` or `KeyboardAvoidingView`); `KeyboardProvider` wraps the app in `app/_layout.jsx`. On full-screen forms without a header, put a fixed `View` of height `insets.top` above the scroll view so the content never scrolls under the status bar (see `components/Form.jsx`). Do not upgrade the keyboard library without regenerating the patch; reference: `C:\workspace\Project_manager\docs\PM_KEYBOARD_CONTEXT.md`.
 - Never put the Supabase `service_role` key in the app or repo; only the anon key. Keep `.env` out of git.
 - Stock changes must go through server-side functions (transactions), never client-side read-modify-write.
