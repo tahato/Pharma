@@ -105,5 +105,9 @@
   "removeStockTitle": "Retirer du stock",
   "reasonAdjustment": "Correction",
   "reasonExpired": "Périmé",
-  "perProduct": "Par produit"
+  "perProduct": "Par produit",
+  "editProduct": "Modifier le produit",
+  "deleteProduct": "Supprimer le produit",
+  "deleteConfirmTitle": "Supprimer ce produit ?",
+  "deleteConfirmBody": "Il sera retiré du stock, de la recherche et des ventes. L'historique des ventes est conservé."
 }

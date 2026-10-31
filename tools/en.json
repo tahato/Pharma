@@ -105,5 +105,9 @@
   "removeStockTitle": "Remove stock",
   "reasonAdjustment": "Correction",
   "reasonExpired": "Expired",
-  "perProduct": "Per product"
+  "perProduct": "Per product",
+  "editProduct": "Edit product",
+  "deleteProduct": "Delete product",
+  "deleteConfirmTitle": "Delete this product?",
+  "deleteConfirmBody": "It will be removed from stock, search and sales. Sales history is kept."
 }

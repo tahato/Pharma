@@ -100,6 +100,32 @@ export async function createProduct(values, imageUri) {
   return data;
 }
 
+// Owner only. imageUri: a newly picked photo (or undefined to keep the current one).
+export async function updateProduct(id, values, { imageUri, currentImagePath }) {
+  const imagePath = imageUri ? await uploadProductImage(imageUri) : currentImagePath;
+  const { error } = await supabase.rpc("update_product", {
+    p_id: id,
+    p_name: values.name,
+    p_barcode: values.barCode || null,
+    p_classe: values.classe || null,
+    p_price_ht: Number(values.htPrice),
+    p_price_ppa: Number(values.ppa),
+    p_min_stock: Number(values.minStock || 5),
+    p_image_path: imagePath ?? null,
+  });
+  if (error) throw error;
+  // Best effort: the old photo is no longer referenced.
+  if (imageUri && currentImagePath) {
+    await supabase.storage.from("product-images").remove([currentImagePath]);
+  }
+}
+
+// Owner only. The product is hidden everywhere; past sales keep their history.
+export async function archiveProduct(id) {
+  const { error } = await supabase.rpc("archive_product", { p_id: id });
+  if (error) throw error;
+}
+
 // delta > 0 adds a batch (expiry required); delta < 0 removes, earliest expiry first.
 export async function adjustStock({ productId, delta, reason, expiry }) {
   const { error } = await supabase.rpc("adjust_stock", {

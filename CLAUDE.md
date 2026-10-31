@@ -30,8 +30,8 @@ npx tsc --noEmit        # must stay clean
 | `app/(tabs)/vente.jsx` | Cart (search or scan to add, swipe-to-remove, `Stepper`), confirmation sheet -> `create_sale` with one idempotent sale id per cart content |
 | `app/(tabs)/historique.jsx` | Sales by period (today / 7 days / month) with total; row -> `/saleDetail` |
 | `app/saleDetail.jsx` | One sale (`?id=`): lines grouped per product, total |
-| `app/medicins.jsx` | Product detail (`?id=`): stock, details, batches; Ajouter / Déstocker open `StockAdjustSheet` -> `adjust_stock` |
-| `app/addProducts.jsx` | New product (validation, barcode scan, month/year expiry, photo camera/gallery) -> photo upload + `create_product` |
+| `app/medicins.jsx` | Product detail (`?id=`): stock, details, batches; Ajouter / Déstocker open `StockAdjustSheet` -> `adjust_stock`; pencil (owner only) -> edit |
+| `app/addProducts.jsx` | New product (validation, barcode scan, month/year expiry, photo camera/gallery) -> photo upload + `create_product`. Opened with `?id=` it edits the product (owner only: `update_product`, quantity/expiry hidden) and offers "Supprimer" (`archive_product`) |
 | `app/settings.jsx` | Profile and role, language toggle (fr/en), alert info, sign out |
 | `components/` | `KeyboardScrollView`, `ScreenHeader`, `Button` (has `loading`), `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `LoadingState`, `ErrorState`, `BarcodeScanner`, `MonthYearPicker`, `StockAdjustSheet`, `Form` (sign-in) |
 | `services/` | `products.js`, `sales.js`, `dashboard.js` (all Supabase calls), `errors.js` (error -> translation key), `invalidate.js` (query invalidation after stock/sales changes) |
@@ -58,7 +58,8 @@ npx tsc --noEmit        # must stay clean
 - Everything is wired to Supabase: sign-in/out with a persisted session, stock list/search/filters, product creation (with photo), Ajouter/Déstocker, sales through `create_sale`, history, sale detail, dashboard counters.
 - **Verified**: database functions and permissions (`supabase/tests/*.sql`), anonymous access refused, TypeScript, lint, Android bundle. **Not yet verified**: the app against the live database with a real signed-in account, photo upload, the keyboard fix and the barcode scanner on a device. Test these first.
 - Needs the first account: create the owner in the Supabase dashboard (Authentication > Users > Add user, Auto Confirm). The first account becomes the owner.
-- Not done: edit/delete product (owner only), team management and editable thresholds (settings shows them read-only), password reset (the sign-in screen tells users to ask the owner), offline selling (deferred).
+- Edit and delete (archive) product: done, owner only.
+- Not done: team management and editable thresholds (settings shows them read-only), password reset (the sign-in screen tells users to ask the owner), offline selling (deferred).
 
 ## Conventions
 - Components are PascalCase function components (hooks require it; lint enforces).
@@ -80,13 +81,14 @@ npx tsc --noEmit        # must stay clean
 2. Schema: **done and live** on the project (migrations in `supabase/migrations/`: tables `profiles`, `products`, `batches`, `sales`, `sale_items`, `stock_movements`; view `product_stock`; RLS; functions `adjust_stock`, `create_sale` (FEFO, idempotent on sale id, prices from the server, expired batches never sold), `set_user_role`; public bucket `product-images`). Migration `20261031100000_app_support.sql` adds `is_low` and `earliest_expiry` to `product_stock` and the `create_product` function. Tested by `supabase/tests/stock_logic.sql` (29 checks) and `app_support.sql` (13 checks), both roll back: `npx supabase db query --linked -f supabase/tests/<file>.sql` prints `TESTS_PASSED`.
 3. Client, service layer, TanStack Query, loading/error states; mock data removed: **done**
 4. Auth (sign-in form, `AuthProvider`, route guard, sign out; register screen removed): **done**
-5. Stock screens on real data (list, search, add, detail, image upload, Ajouter/Déstocker): **done**, edit/delete product still missing
+5. Stock screens on real data (list, search, add, detail, image upload, Ajouter/Déstocker): **done** (edit and delete/archive included)
 6. Sales: checkout via `create_sale`, barcode scan, sale detail: **done**
 7. Dashboard on real data: **done** (counters and watch list; push notifications not planned)
 8. Roles (owner/staff), team management, editable thresholds
 9. Hardening and tests; 10. optional offline; 11. EAS release
 
 ## Database rules (Supabase)
+- "Deleting" a product ARCHIVES it (`products.archived_at`, function `archive_product`): `product_stock`, search, scans, `create_sale` and `adjust_stock` ignore archived products, but sales and movements keep their history. A barcode is unique only among active products. `update_product` and `archive_product` are owner-only and raise `forbidden` for staff. Test: `supabase/tests/product_admin.sql` (20 checks).
 - Stock and sales are written ONLY through `adjust_stock`, `create_sale` and `create_product` (`supabase.rpc`); the tables have no insert/update policies for sales, sale items or movements. The first account created becomes the owner (trigger `handle_new_user`); later ones are staff.
 - Staff can create products, sell and adjust stock; only the owner edits prices, deletes products, corrects batches and changes roles (`set_user_role`).
 - Error codes come back as the message of the Postgres error: `insufficient_stock` (detail = product name), `expiry_required`, `invalid_quantity`, `product_not_found`, `empty_sale`, `not_authenticated`, `forbidden`, `last_owner`.

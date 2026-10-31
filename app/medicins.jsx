@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -14,6 +14,7 @@ import LoadingState from "@/components/LoadingState";
 import ScreenHeader from "@/components/ScreenHeader";
 import StockAdjustSheet from "@/components/StockAdjustSheet";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
+import { useAuth } from "@/lib/auth";
 import { fetchProduct, productImageUrl } from "@/services/products";
 import {
   daysUntil,
@@ -32,6 +33,7 @@ const STATUS = {
 export default function Medicins() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams();
+  const { isOwner } = useAuth();
   const [sheet, setSheet] = useState(null); // "add" | "remove" | null
   const { data: product, isPending, isError, error, refetch } = useQuery({
     queryKey: ["product", id],
@@ -43,7 +45,20 @@ export default function Medicins() {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title={product?.name ?? ""} onBack={() => router.back()} />
+      <ScreenHeader
+        title={product?.name ?? ""}
+        onBack={() => router.back()}
+        right={
+          isOwner && product ? (
+            <Pressable
+              hitSlop={12}
+              onPress={() => router.push({ pathname: "/addProducts", params: { id: product.id } })}
+            >
+              <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.onPrimary} />
+            </Pressable>
+          ) : null
+        }
+      />
       {isPending && <LoadingState />}
       {isError && <ErrorState error={error} onRetry={refetch} />}
       {product && (

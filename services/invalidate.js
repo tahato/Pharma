@@ -2,6 +2,7 @@
 export function invalidateStock(queryClient) {
   queryClient.invalidateQueries({ queryKey: ["products"] });
   queryClient.invalidateQueries({ queryKey: ["product"] });
+  queryClient.invalidateQueries({ queryKey: ["productSearch"] });
   queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 }
 
