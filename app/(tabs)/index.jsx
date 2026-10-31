@@ -1,34 +1,34 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
+import ErrorState from "@/components/ErrorState";
+import LoadingState from "@/components/LoadingState";
 import ScreenHeader from "@/components/ScreenHeader";
 import { colors, font, spacing } from "@/constants/theme";
-import { products, sales, user } from "@/data/mock";
-import {
-  daysUntil,
-  EXPIRY_ALERT_DAYS,
-  formatDA,
-  formatExpiry,
-  isExpiringSoon,
-  nextExpiry,
-  stockStatus,
-} from "@/tools/stock";
+import { useAuth } from "@/lib/auth";
+import { fetchDashboard } from "@/services/dashboard";
+import { formatDA, formatExpiry, isExpiringSoon } from "@/tools/stock";
 
 const OVERLAP = 28;
 
 export default function Home() {
   const { t, i18n } = useTranslation();
-
-  const today = sales.filter((s) => s.daysAgo === 0);
-  const todayTotal = today.reduce((sum, s) => sum + s.total, 0);
-  const lowCount = products.filter((p) => stockStatus(p) !== "ok").length;
-  const expiringCount = products.filter((p) => isExpiringSoon(p)).length;
-  const watch = products
-    .filter((p) => stockStatus(p) !== "ok" || isExpiringSoon(p))
-    .slice(0, 5);
+  const { profile } = useAuth();
+  const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: fetchDashboard,
+  });
 
   const date = new Date().toLocaleDateString(i18n.language, {
     weekday: "long",
@@ -42,7 +42,7 @@ export default function Home() {
   return (
     <View style={styles.screen}>
       <ScreenHeader
-        title={t("greeting", { name: user.name })}
+        title={t("greeting", { name: profile?.full_name ?? "" })}
         subtitle={date.charAt(0).toUpperCase() + date.slice(1)}
         overlap={OVERLAP}
         right={
@@ -58,47 +58,54 @@ export default function Home() {
       <ScrollView
         style={{ marginTop: -OVERLAP }}
         contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
-        <Card style={styles.summary}>
-          <Text style={styles.muted}>{t("todaySales")}</Text>
-          <Text style={styles.total}>{formatDA(todayTotal)}</Text>
-          <Text style={styles.muted}>
-            {t("salesCount", { count: today.length })}
-          </Text>
-        </Card>
-
-        <View style={styles.counters}>
-          <Card style={styles.counter} onPress={() => openStock("low")}>
-            <Badge label={String(lowCount)} tone="warning" />
-            <Text style={styles.muted}>{t("lowStockLabel")}</Text>
-          </Card>
-          <Card style={styles.counter} onPress={() => openStock("expiring")}>
-            <Badge label={String(expiringCount)} tone="danger" />
-            <Text style={styles.muted}>{t("expiringSoon")}</Text>
-          </Card>
-        </View>
-
-        <Text style={styles.section}>{t("watchList")}</Text>
-        {watch.map((p) => {
-          const expiring = isExpiringSoon(p);
-          return (
-            <Card
-              key={p.id}
-              style={styles.watchRow}
-              onPress={() => router.push({ pathname: "/medicins", params: { id: p.id } })}
-            >
-              <Text style={styles.name}>{p.name}</Text>
-              {expiring && daysUntil(nextExpiry(p)) <= EXPIRY_ALERT_DAYS ? (
-                <Badge
-                  label={t("expiresOn", { date: formatExpiry(nextExpiry(p)) })}
-                  tone="danger"
-                />
-              ) : (
-                <Badge label={t("remaining", { count: p.qty })} tone="warning" />
-              )}
+        {isPending && <LoadingState />}
+        {isError && <ErrorState error={error} onRetry={refetch} />}
+        {data && (
+          <>
+            <Card style={styles.summary}>
+              <Text style={styles.muted}>{t("todaySales")}</Text>
+              <Text style={styles.total}>{formatDA(data.todayTotal)}</Text>
+              <Text style={styles.muted}>
+                {t("salesCount", { count: data.todayCount })}
+              </Text>
             </Card>
-          );
-        })}
+
+            <View style={styles.counters}>
+              <Card style={styles.counter} onPress={() => openStock("low")}>
+                <Badge label={String(data.lowCount)} tone="warning" />
+                <Text style={styles.muted}>{t("lowStockLabel")}</Text>
+              </Card>
+              <Card style={styles.counter} onPress={() => openStock("expiring")}>
+                <Badge label={String(data.expiringCount)} tone="danger" />
+                <Text style={styles.muted}>{t("expiringSoon")}</Text>
+              </Card>
+            </View>
+
+            <Text style={styles.section}>{t("watchList")}</Text>
+            {data.watch.length === 0 && (
+              <Text style={styles.muted}>{t("nothingToWatch")}</Text>
+            )}
+            {data.watch.map((p) => (
+              <Card
+                key={p.id}
+                style={styles.watchRow}
+                onPress={() => router.push({ pathname: "/medicins", params: { id: p.id } })}
+              >
+                <Text style={styles.name}>{p.name}</Text>
+                {isExpiringSoon(p) ? (
+                  <Badge
+                    label={t("expiresOn", { date: formatExpiry(p.earliest_expiry) })}
+                    tone="danger"
+                  />
+                ) : (
+                  <Badge label={t("remaining", { count: p.qty })} tone="warning" />
+                )}
+              </Card>
+            ))}
+          </>
+        )}
       </ScrollView>
     </View>
   );

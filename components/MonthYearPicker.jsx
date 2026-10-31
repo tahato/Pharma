@@ -4,14 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
 
-// Picks a month and year. onChange receives an ISO date: the last day of the month.
+const pad = (n) => String(n).padStart(2, "0");
+
+// Picks a month and year. onChange receives the last day of that month as
+// "YYYY-MM-DD" (the format of the database `date` columns).
 export default function MonthYearPicker({ visible, value, onChange, onClose }) {
   const { i18n } = useTranslation();
   const now = new Date();
-  const selected = value ? new Date(value) : null;
-  const [year, setYear] = useState(
-    (selected ?? now).getFullYear(),
-  );
+  const selected = value ? new Date(`${value}T12:00:00`) : null;
+  const [year, setYear] = useState((selected ?? now).getFullYear());
 
   const monthLabel = (m) =>
     new Date(2000, m, 1).toLocaleDateString(i18n.language, { month: "short" });
@@ -20,7 +21,14 @@ export default function MonthYearPicker({ visible, value, onChange, onClose }) {
     (year === now.getFullYear() && m < now.getMonth());
 
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="slide"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={styles.sheet}>
         <View style={styles.handle} />
@@ -49,8 +57,8 @@ export default function MonthYearPicker({ visible, value, onChange, onClose }) {
                 disabled={past}
                 style={[styles.month, active && styles.monthActive]}
                 onPress={() => {
-                  // Noon on the last day, so timezone shifts never change the month.
-                  onChange(new Date(year, m + 1, 0, 12).toISOString());
+                  const lastDay = new Date(year, m + 1, 0).getDate();
+                  onChange(`${year}-${pad(m + 1)}-${pad(lastDay)}`);
                   onClose();
                 }}
               >

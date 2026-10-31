@@ -1,28 +1,39 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "@/components/Button";
 import KeyboardScrollView from "@/components/KeyboardScrollView";
 import TextField from "@/components/TextField";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
+import { useAuth } from "@/lib/auth";
+import { errorKey } from "@/services/errors";
 
-export default function Form({ screen }) {
+// Sign-in form. Accounts are created by the owner (public sign-ups are off).
+export default function Form() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const isRegister = screen === "register";
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Real authentication is wired in the Supabase auth phase.
-  const handleSubmit = () => {};
-
-  const eye = showPassword ? "eye-off-outline" : "eye-outline";
+  const handleSubmit = async () => {
+    if (!email.trim() || !password) {
+      setError(t("loginAlert"));
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const { error: signInError } = await signIn(email.trim(), password);
+    setLoading(false);
+    // On success the route guard moves the app to the tabs by itself.
+    if (signInError) setError(t(errorKey(signInError)));
+  };
 
   return (
     <View style={styles.screen}>
@@ -45,11 +56,16 @@ export default function Form({ screen }) {
         </View>
 
         <Text style={styles.title}>{t("appTitle")}</Text>
-        <Text style={styles.subtitle}>
-          {t(isRegister ? "registerSubtitle" : "loginSubtitle")}
-        </Text>
+        <Text style={styles.subtitle}>{t("loginSubtitle")}</Text>
 
         <View style={styles.card}>
+          {error ? (
+            <View style={styles.banner}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.danger} />
+              <Text style={styles.bannerText}>{error}</Text>
+            </View>
+          ) : null}
+
           <View style={styles.group}>
             <Text style={styles.label}>{t("emailLabel")}</Text>
             <TextField
@@ -59,6 +75,7 @@ export default function Form({ screen }) {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -66,7 +83,7 @@ export default function Form({ screen }) {
             <Text style={styles.label}>{t("psw")}</Text>
             <TextField
               leftIcon="lock-outline"
-              icon={eye}
+              icon={showPassword ? "eye-off-outline" : "eye-outline"}
               onIconPress={() => setShowPassword(!showPassword)}
               placeholder={t("pswPlaceholder")}
               value={password}
@@ -75,34 +92,16 @@ export default function Form({ screen }) {
             />
           </View>
 
-          {isRegister && (
-            <View style={styles.group}>
-              <Text style={styles.label}>{t("Cpsw")}</Text>
-              <TextField
-                leftIcon="lock-outline"
-                icon={eye}
-                onIconPress={() => setShowPassword(!showPassword)}
-                placeholder={t("pswPlaceholder")}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPassword}
-              />
-            </View>
-          )}
-
-          <Button
-            title={isRegister ? t("register") : t("login")}
-            onPress={handleSubmit}
-          />
-          {!isRegister && <Text style={styles.link}>{t("forgotPassword")}</Text>}
+          <Button title={t("login")} onPress={handleSubmit} loading={loading} />
+          <Text
+            style={styles.link}
+            onPress={() => Alert.alert(t("forgotPassword"), t("forgotPasswordHelp"))}
+          >
+            {t("forgotPassword")}
+          </Text>
         </View>
 
-        <Text
-          style={styles.switch}
-          onPress={() => router.replace(isRegister ? "login" : "register")}
-        >
-          {isRegister ? t("haveAccount") : t("noAccount")}
-        </Text>
+        <Text style={styles.help}>{t("noAccountHelp")}</Text>
         <Text style={styles.footer}>{t("footer")}</Text>
       </KeyboardScrollView>
     </View>
@@ -145,6 +144,15 @@ const styles = StyleSheet.create({
     borderWidth: hairline,
     borderRadius: radius.sheet,
   },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.dangerBg,
+    borderRadius: radius.input,
+  },
+  bannerText: { flex: 1, color: colors.danger, fontSize: font.body },
   group: { gap: spacing.sm },
   label: { fontSize: font.body, fontWeight: "500", color: colors.text },
   link: {
@@ -153,11 +161,11 @@ const styles = StyleSheet.create({
     fontSize: font.body,
     fontWeight: "500",
   },
-  switch: {
+  help: {
     marginTop: spacing.lg,
-    color: colors.primaryDark,
+    textAlign: "center",
+    color: colors.textSecondary,
     fontSize: font.small,
-    padding: spacing.sm,
   },
   footer: {
     marginTop: "auto",

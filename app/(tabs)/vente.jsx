@@ -1,5 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { randomUUID } from "expo-crypto";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -19,60 +21,104 @@ import ScreenHeader from "@/components/ScreenHeader";
 import SearchBar from "@/components/SearchBar";
 import Stepper from "@/components/Stepper";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
-import { products } from "@/data/mock";
+import useDebounce from "@/lib/useDebounce";
+import { errorText } from "@/services/errors";
+import { invalidateSales } from "@/services/invalidate";
+import { fetchProductByBarcode, searchProducts } from "@/services/products";
+import { createSale } from "@/services/sales";
 import { formatDA } from "@/tools/stock";
-
-const byId = (id) => products.find((p) => p.id === id);
 
 export default function Vente() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
-  const [cart, setCart] = useState([
-    { id: "1", qty: 2 },
-    { id: "2", qty: 1 },
-    { id: "4", qty: 3 },
-  ]);
+  const [cart, setCart] = useState([]); // [{ product, qty }]
   const [confirming, setConfirming] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [saleError, setSaleError] = useState(null);
+  // One id per cart content: retrying the same sale after a network error can
+  // never record it twice. Any change to the cart starts a new id.
+  const saleId = useRef(null);
 
-  const q = query.trim().toLowerCase();
-  const results = q
-    ? products
-        .filter((p) => p.name.toLowerCase().includes(q) || p.barcode.includes(q))
-        .slice(0, 5)
-    : [];
+  const debounced = useDebounce(query.trim());
+  const search = useQuery({
+    queryKey: ["productSearch", debounced],
+    queryFn: () => searchProducts(debounced),
+    enabled: debounced.length > 0,
+  });
+  const results = debounced ? (search.data ?? []) : [];
 
-  const addToCart = (id) => {
-    setCart((c) =>
-      c.some((l) => l.id === id)
-        ? c.map((l) => (l.id === id ? { ...l, qty: Math.min(l.qty + 1, byId(id).qty) } : l))
-        : [...c, { id, qty: 1 }],
+  const updateCart = (next) => {
+    saleId.current = null;
+    setCart(next);
+  };
+
+  const addToCart = (product) => {
+    if (product.qty <= 0) {
+      Alert.alert(product.name, t("outOfStock"));
+      return;
+    }
+    const existing = cart.find((l) => l.product.id === product.id);
+    updateCart(
+      existing
+        ? cart.map((l) =>
+            l.product.id === product.id
+              ? { ...l, qty: Math.min(l.qty + 1, product.qty) }
+              : l,
+          )
+        : [...cart, { product, qty: 1 }],
     );
     setQuery("");
   };
 
-  const handleScan = (code) => {
+  const handleScan = async (code) => {
     setScanning(false);
-    const product = products.find((p) => p.barcode === code);
-    if (!product) {
-      Alert.alert(t("productNotFound"), code);
-    } else if (product.qty <= 0) {
-      Alert.alert(product.name, t("outOfStock"));
-    } else {
-      addToCart(product.id);
+    try {
+      const product = await fetchProductByBarcode(code);
+      if (product) addToCart(product);
+      else Alert.alert(t("productNotFound"), code);
+    } catch (e) {
+      Alert.alert(t("loadError"), errorText(t, e));
     }
   };
 
   // Setting the quantity to 0 removes the line.
-  const setQty = (id, qty) =>
-    setCart((c) =>
+  const setQty = (productId, qty) =>
+    updateCart(
       qty <= 0
-        ? c.filter((l) => l.id !== id)
-        : c.map((l) => (l.id === id ? { ...l, qty } : l)),
+        ? cart.filter((l) => l.product.id !== productId)
+        : cart.map((l) => (l.product.id === productId ? { ...l, qty } : l)),
     );
 
   const count = cart.reduce((sum, l) => sum + l.qty, 0);
-  const total = cart.reduce((sum, l) => sum + l.qty * byId(l.id).ppa, 0);
+  const total = cart.reduce((sum, l) => sum + l.qty * Number(l.product.price_ppa), 0);
+
+  const sale = useMutation({
+    mutationFn: () => {
+      saleId.current ??= randomUUID();
+      return createSale(
+        cart.map((l) => ({ productId: l.product.id, qty: l.qty })),
+        saleId.current,
+      );
+    },
+    onSuccess: () => {
+      invalidateSales(queryClient);
+      saleId.current = null;
+      setCart([]);
+      setConfirming(false);
+      Alert.alert(t("saleSaved"), formatDA(total));
+    },
+    onError: (e) => {
+      setSaleError(errorText(t, e));
+      // Stock may have changed since the products were loaded.
+      invalidateSales(queryClient);
+    },
+  });
+
+  const openConfirm = () => {
+    setSaleError(null);
+    setConfirming(true);
+  };
 
   return (
     <View style={styles.screen}>
@@ -88,9 +134,9 @@ export default function Vente() {
           onScan={() => setScanning(true)}
         />
         {results.map((p) => (
-          <Pressable key={p.id} style={styles.result} onPress={() => addToCart(p.id)}>
+          <Pressable key={p.id} style={styles.result} onPress={() => addToCart(p)}>
             <Text style={styles.name}>{p.name}</Text>
-            <Text style={styles.price}>{formatDA(p.ppa)}</Text>
+            <Text style={styles.price}>{formatDA(p.price_ppa)}</Text>
           </Pressable>
         ))}
 
@@ -102,35 +148,32 @@ export default function Vente() {
           />
         )}
 
-        {cart.map((line) => {
-          const p = byId(line.id);
-          return (
-            <ReanimatedSwipeable
-              key={line.id}
-              overshootRight={false}
-              renderRightActions={() => (
-                <Pressable
-                  style={styles.remove}
-                  onPress={() => setQty(line.id, 0)}
-                >
-                  <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.onPrimary} />
-                  <Text style={styles.removeText}>{t("delete")}</Text>
-                </Pressable>
-              )}
-            >
-              <Card style={styles.line}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{p.name}</Text>
-                  <Text style={styles.price}>{formatDA(p.ppa)}</Text>
-                </View>
-                <Stepper
-                  value={line.qty}
-                  onChange={(v) => setQty(line.id, Math.min(v, p.qty))}
-                />
-              </Card>
-            </ReanimatedSwipeable>
-          );
-        })}
+        {cart.map((line) => (
+          <ReanimatedSwipeable
+            key={line.product.id}
+            overshootRight={false}
+            renderRightActions={() => (
+              <Pressable
+                style={styles.remove}
+                onPress={() => setQty(line.product.id, 0)}
+              >
+                <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.onPrimary} />
+                <Text style={styles.removeText}>{t("delete")}</Text>
+              </Pressable>
+            )}
+          >
+            <Card style={styles.line}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>{line.product.name}</Text>
+                <Text style={styles.price}>{formatDA(line.product.price_ppa)}</Text>
+              </View>
+              <Stepper
+                value={line.qty}
+                onChange={(v) => setQty(line.product.id, Math.min(v, line.product.qty))}
+              />
+            </Card>
+          </ReanimatedSwipeable>
+        ))}
       </KeyboardScrollView>
 
       {cart.length > 0 && (
@@ -139,7 +182,7 @@ export default function Vente() {
             <Text style={styles.price}>{t("items", { count })}</Text>
             <Text style={styles.total}>{formatDA(total)}</Text>
           </View>
-          <Button title={t("checkout")} onPress={() => setConfirming(true)} />
+          <Button title={t("checkout")} onPress={openConfirm} />
         </View>
       )}
 
@@ -153,6 +196,8 @@ export default function Vente() {
         transparent
         visible={confirming}
         animationType="slide"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setConfirming(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setConfirming(false)} />
@@ -160,22 +205,24 @@ export default function Vente() {
           <View style={styles.handle} />
           <Text style={styles.sheetTitle}>{t("confirmSale")}</Text>
           {cart.map((l) => (
-            <View key={l.id} style={styles.sheetRow}>
+            <View key={l.product.id} style={styles.sheetRow}>
               <Text style={styles.name}>
-                {byId(l.id).name} x{l.qty}
+                {l.product.name} x{l.qty}
               </Text>
-              <Text style={styles.name}>{formatDA(l.qty * byId(l.id).ppa)}</Text>
+              <Text style={styles.name}>{formatDA(l.qty * Number(l.product.price_ppa))}</Text>
             </View>
           ))}
           <View style={styles.sheetRow}>
             <Text style={styles.sheetTotal}>{t("total")}</Text>
             <Text style={styles.sheetTotal}>{formatDA(total)}</Text>
           </View>
+          {saleError ? <Text style={styles.error}>{saleError}</Text> : null}
           <Button
             title={t("confirm")}
+            loading={sale.isPending}
             onPress={() => {
-              setCart([]);
-              setConfirming(false);
+              setSaleError(null);
+              sale.mutate();
             }}
           />
           <Button
@@ -250,4 +297,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   sheetTotal: { fontSize: 14, fontWeight: "500", color: colors.text },
+  error: { color: colors.danger, fontSize: font.small },
 });

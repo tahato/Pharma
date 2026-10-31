@@ -1,26 +1,31 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system/legacy";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import Button from "@/components/Button";
 import KeyboardScrollView from "@/components/KeyboardScrollView";
 import MonthYearPicker from "@/components/MonthYearPicker";
 import ScreenHeader from "@/components/ScreenHeader";
 import TextField from "@/components/TextField";
-import { colors, radius, spacing } from "@/constants/theme";
-import { formatExpiry } from "@/tools/stock";
+import { colors, font, radius, spacing } from "@/constants/theme";
+import { errorText } from "@/services/errors";
+import { invalidateStock } from "@/services/invalidate";
+import { createProduct } from "@/services/products";
+import { formatExpiry, localDateString } from "@/tools/stock";
 
 const isNumber = (v) => v !== undefined && v.trim() !== "" && !isNaN(Number(v)) && Number(v) >= 0;
+const isInteger = (v) => isNumber(v) && Number.isInteger(Number(v));
 
 export default function AddProducts() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [image, setImage] = useState();
-  const [form, setForm] = useState({});
+  const [form, setForm] = useState({ minStock: "5" });
   const [errors, setErrors] = useState({});
   const [scanning, setScanning] = useState(false);
   const [pickingDate, setPickingDate] = useState(false);
@@ -29,6 +34,15 @@ export default function AddProducts() {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
   };
+
+  const mutation = useMutation({
+    mutationFn: ({ values, imageUri }) => createProduct(values, imageUri),
+    onSuccess: () => {
+      invalidateStock(queryClient);
+      router.back();
+    },
+    onError: (e) => setErrors({ form: errorText(t, e) }),
+  });
 
   const textField = (key, label, props) => (
     <TextField
@@ -42,19 +56,23 @@ export default function AddProducts() {
 
   const validate = () => {
     const e = {};
+    const qty = form.qt?.trim() ? Number(form.qt) : 0;
     if (!form.name?.trim()) e.name = t("errRequired");
-    if (!isNumber(form.qt) || !Number.isInteger(Number(form.qt))) e.qt = t("errNumber");
+    if (form.qt?.trim() && !isInteger(form.qt)) e.qt = t("errNumber");
     if (!isNumber(form.htPrice)) e.htPrice = t("errNumber");
     if (!isNumber(form.ppa)) e.ppa = t("errNumber");
-    if (!form.expiry) e.expiry = t("errRequired");
-    else if (new Date(form.expiry) < new Date()) e.expiry = t("errPastDate");
+    if (!isInteger(form.minStock)) e.minStock = t("errNumber");
+    if (qty > 0) {
+      if (!form.expiry) e.expiry = t("errRequired");
+      else if (form.expiry < localDateString()) e.expiry = t("errPastDate");
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  // Persistence comes with the Supabase phase; for now a valid form just closes.
   const save = () => {
-    if (validate()) router.back();
+    if (!validate()) return;
+    mutation.mutate({ values: form, imageUri: image });
   };
 
   const pickImage = async (fromCamera) => {
@@ -69,23 +87,12 @@ export default function AddProducts() {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      quality: 0.7,
     };
     const result = fromCamera
       ? await ImagePicker.launchCameraAsync(options)
       : await ImagePicker.launchImageLibraryAsync(options);
-
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setImage(uri);
-      const fileName = uri.split("/").pop();
-      const destPath = `${FileSystem.documentDirectory}${fileName}`;
-      try {
-        await FileSystem.copyAsync({ from: uri, to: destPath });
-      } catch (error) {
-        console.error("Error saving image:", error);
-      }
-    }
+    if (!result.canceled) setImage(result.assets[0].uri);
   };
 
   const chooseImageSource = () => {
@@ -144,8 +151,15 @@ export default function AddProducts() {
           {textField("htPrice", "priceHt", { style: { flex: 1 }, keyboardType: "numeric" })}
           {textField("ppa", "ppa", { style: { flex: 1 }, keyboardType: "numeric" })}
         </View>
+        {textField("minStock", "minStock", { keyboardType: "numeric" })}
 
-        <Button title={t("save")} onPress={save} style={styles.save} />
+        {errors.form ? <Text style={styles.formError}>{errors.form}</Text> : null}
+        <Button
+          title={t("save")}
+          onPress={save}
+          loading={mutation.isPending}
+          style={styles.save}
+        />
       </KeyboardScrollView>
 
       <BarcodeScanner
@@ -159,7 +173,7 @@ export default function AddProducts() {
       <MonthYearPicker
         visible={pickingDate}
         value={form.expiry}
-        onChange={(iso) => update("expiry", iso)}
+        onChange={(date) => update("expiry", date)}
         onClose={() => setPickingDate(false)}
       />
     </View>
@@ -181,5 +195,6 @@ const styles = StyleSheet.create({
   },
   photoImage: { width: "100%", height: "100%" },
   pair: { flexDirection: "row", gap: spacing.md },
+  formError: { color: colors.danger, fontSize: font.small },
   save: { marginTop: spacing.sm },
 });
