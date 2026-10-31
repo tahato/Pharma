@@ -13,6 +13,7 @@ import ProductRow from "@/components/ProductRow";
 import ScreenHeader from "@/components/ScreenHeader";
 import SearchBar from "@/components/SearchBar";
 import { colors, spacing } from "@/constants/theme";
+import { useSettings } from "@/lib/settings";
 import useDebounce from "@/lib/useDebounce";
 import { fetchProductPage, PAGE_SIZE } from "@/services/products";
 
@@ -29,15 +30,16 @@ export default function Stock() {
   const [filter, setFilter] = useState("all");
   const [scanning, setScanning] = useState(false);
   const debounced = useDebounce(query);
+  const { expiryDays } = useSettings();
 
   useEffect(() => {
     if (params.filter) setFilter(params.filter);
   }, [params.filter]);
 
   const list = useInfiniteQuery({
-    queryKey: ["products", { query: debounced, filter }],
+    queryKey: ["products", { query: debounced, filter, expiryDays }],
     queryFn: ({ pageParam }) =>
-      fetchProductPage({ query: debounced, filter, page: pageParam }),
+      fetchProductPage({ query: debounced, filter, page: pageParam, expiryDays }),
     initialPageParam: 0,
     getNextPageParam: (last, all) => (last.length === PAGE_SIZE ? all.length : undefined),
     placeholderData: keepPreviousData,

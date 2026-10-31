@@ -1,11 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { EXPIRY_ALERT_DAYS, localDateString } from "@/tools/stock";
 
-export async function fetchDashboard() {
+export async function fetchDashboard(expiryDays = EXPIRY_ALERT_DAYS) {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   const soon = new Date();
-  soon.setDate(soon.getDate() + EXPIRY_ALERT_DAYS);
+  soon.setDate(soon.getDate() + expiryDays);
   const soonDate = localDateString(soon);
 
   const [sales, low, expiring, watch] = await Promise.all([

@@ -1,17 +1,23 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Badge from "@/components/Badge";
+import BottomSheet from "@/components/BottomSheet";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import ScreenHeader from "@/components/ScreenHeader";
+import TextField from "@/components/TextField";
 import { colors, font, hairline, spacing } from "@/constants/theme";
 import { useAuth } from "@/lib/auth";
-import { EXPIRY_ALERT_DAYS } from "@/tools/stock";
+import { useSettings } from "@/lib/settings";
+import { errorText } from "@/services/errors";
+import { invalidateStock } from "@/services/invalidate";
+import { updateExpiryDays } from "@/services/settings";
 
-function Row({ icon, label, value, onPress, last }) {
+function Row({ icon, label, value, onPress, chevron, last }) {
   return (
     <Pressable
       onPress={onPress}
@@ -20,15 +26,66 @@ function Row({ icon, label, value, onPress, last }) {
     >
       <MaterialCommunityIcons name={icon} size={20} color={colors.textSecondary} />
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      {value ? <Text style={styles.value}>{value}</Text> : null}
+      {chevron && (
+        <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} />
+      )}
     </Pressable>
+  );
+}
+
+function ExpiryDaysSheet({ visible, current, onClose }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [days, setDays] = useState("");
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (visible) {
+      setDays(String(current));
+      setError(null);
+    }
+  }, [visible, current]);
+
+  const save = useMutation({
+    mutationFn: updateExpiryDays,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      invalidateStock(queryClient);
+      onClose();
+    },
+    onError: (e) => setError(errorText(t, e)),
+  });
+
+  const submit = () => {
+    const n = Number(days);
+    if (!Number.isInteger(n) || n < 1 || n > 365) return setError(t("errDaysRange"));
+    setError(null);
+    save.mutate(n);
+  };
+
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={styles.sheetTitle}>{t("expiryAlert")}</Text>
+      <TextField
+        label={t("expiryDays")}
+        value={days}
+        onChangeText={setDays}
+        keyboardType="numeric"
+      />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Button title={t("save")} onPress={submit} loading={save.isPending} />
+      <Button title={t("cancel")} variant="secondary" onPress={onClose} />
+    </BottomSheet>
   );
 }
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
   const { profile, isOwner, session, signOut } = useAuth();
+  const { expiryDays } = useSettings();
   const [signingOut, setSigningOut] = useState(false);
+  const [editingDays, setEditingDays] = useState(false);
 
   const name = profile?.full_name || session?.user.email || "";
   const initials = name
@@ -67,10 +124,20 @@ export default function Settings() {
             value={t("languageName")}
             onPress={toggleLanguage}
           />
+          {isOwner && (
+            <Row
+              icon="account-group-outline"
+              label={t("team")}
+              chevron
+              onPress={() => router.push("/team")}
+            />
+          )}
           <Row
             icon="bell-outline"
             label={t("expiryAlert")}
-            value={t("daysValue", { count: EXPIRY_ALERT_DAYS })}
+            value={t("daysValue", { count: expiryDays })}
+            chevron={isOwner}
+            onPress={isOwner ? () => setEditingDays(true) : undefined}
           />
           <Row icon="alert-outline" label={t("lowStockThreshold")} value={t("perProduct")} last />
         </Card>
@@ -82,6 +149,11 @@ export default function Settings() {
           onPress={handleSignOut}
         />
       </ScrollView>
+      <ExpiryDaysSheet
+        visible={editingDays}
+        current={expiryDays}
+        onClose={() => setEditingDays(false)}
+      />
     </View>
   );
 }
@@ -115,4 +187,6 @@ const styles = StyleSheet.create({
   },
   label: { flex: 1, fontSize: font.body, color: colors.text },
   value: { fontSize: font.body, color: colors.textSecondary },
+  sheetTitle: { fontSize: font.title, fontWeight: "500", color: colors.text },
+  error: { color: colors.danger, fontSize: font.small },
 });

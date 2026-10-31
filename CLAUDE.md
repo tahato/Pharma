@@ -32,14 +32,15 @@ npx tsc --noEmit        # must stay clean
 | `app/saleDetail.jsx` | One sale (`?id=`): lines grouped per product, total |
 | `app/medicins.jsx` | Product detail (`?id=`): stock, details, batches; Ajouter / Déstocker open `StockAdjustSheet` -> `adjust_stock`; pencil (owner only) -> edit |
 | `app/addProducts.jsx` | New product (validation, barcode scan, month/year expiry, photo camera/gallery) -> photo upload + `create_product`. Opened with `?id=` it edits the product (owner only: `update_product`, quantity/expiry hidden) and offers "Supprimer" (`archive_product`) |
-| `app/settings.jsx` | Profile and role, language toggle (fr/en), alert info, sign out |
-| `components/` | `KeyboardScrollView`, `ScreenHeader`, `Button` (has `loading`), `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `LoadingState`, `ErrorState`, `BarcodeScanner`, `MonthYearPicker`, `StockAdjustSheet`, `Form` (sign-in) |
-| `services/` | `products.js`, `sales.js`, `dashboard.js` (all Supabase calls), `errors.js` (error -> translation key), `invalidate.js` (query invalidation after stock/sales changes) |
-| `lib/` | `supabase.js` (client), `auth.jsx` (AuthProvider, `useAuth`: session, profile, `isOwner`), `queryClient.js`, `useDebounce.js` |
+| `app/settings.jsx` | Profile and role, language toggle (fr/en), Équipe (owner), expiry alert window (owner edits it in a sheet, staff read it), sign out |
+| `app/team.jsx` | Owner only: team list; FAB creates an employee (`CreateStaffSheet`), tap a member for `MemberSheet` (reset password, owner/staff role, deactivate/reactivate) |
+| `components/` | `KeyboardScrollView`, `ScreenHeader`, `Button` (has `loading`), `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `LoadingState`, `ErrorState`, `BarcodeScanner`, `MonthYearPicker`, `StockAdjustSheet`, `BottomSheet` (generic keyboard-safe sheet), `CreateStaffSheet`, `MemberSheet`, `Form` (sign-in) |
+| `services/` | `products.js`, `sales.js`, `dashboard.js`, `team.js`, `settings.js` (all Supabase calls), `errors.js` (error -> translation key), `invalidate.js` (query invalidation after stock/sales changes) |
+| `lib/` | `supabase.js` (client), `auth.jsx` (AuthProvider, `useAuth`: session, profile, `isOwner`), `queryClient.js`, `settings.js` (`useSettings()` -> `expiryDays`, default 30), `useDebounce.js` |
 | `constants/theme.ts` | Design tokens: `colors`, `spacing`, `radius`, `font`, `hairline` |
 | `tools/stock.js` | `stockStatus`, expiry helpers, `EXPIRY_ALERT_DAYS` (30), `formatDA`, `formatExpiry`, `localDateString` |
 | `tools/i18next.js`, `fr.json`, `en.json` | i18n setup and translations |
-| `supabase/` | `migrations/` (schema, functions, storage, app support), `tests/` (rollback SQL tests), `config.toml` |
+| `supabase/` | `migrations/` (schema, functions, storage, app support, archive, team/settings), `tests/` (rollback SQL tests), `functions/manage-staff` (Deno edge function), `config.toml` |
 
 ## Decisions
 - **Backend**: Supabase (Postgres) over Firebase, because stock, batches, expiry and sales are relational and need transactions and reports.
@@ -59,7 +60,8 @@ npx tsc --noEmit        # must stay clean
 - **Verified**: database functions and permissions (`supabase/tests/*.sql`), anonymous access refused, TypeScript, lint, Android bundle. **Not yet verified**: the app against the live database with a real signed-in account, photo upload, the keyboard fix and the barcode scanner on a device. Test these first.
 - Needs the first account: create the owner in the Supabase dashboard (Authentication > Users > Add user, Auto Confirm). The first account becomes the owner.
 - Edit and delete (archive) product: done, owner only.
-- Not done: team management and editable thresholds (settings shows them read-only), password reset (the sign-in screen tells users to ask the owner), offline selling (deferred).
+- Team management (create employees, reset passwords, change roles, deactivate) and the editable expiry window: done, owner only.
+- Not done: password reset by e-mail (the sign-in screen tells users to ask the owner), per-product minimum is the only low-stock threshold, offline selling (deferred).
 
 ## Conventions
 - Components are PascalCase function components (hooks require it; lint enforces).
@@ -84,7 +86,7 @@ npx tsc --noEmit        # must stay clean
 5. Stock screens on real data (list, search, add, detail, image upload, Ajouter/Déstocker): **done** (edit and delete/archive included)
 6. Sales: checkout via `create_sale`, barcode scan, sale detail: **done**
 7. Dashboard on real data: **done** (counters and watch list; push notifications not planned)
-8. Roles (owner/staff), team management, editable thresholds
+8. Roles (owner/staff), team management, editable expiry window: **done**
 9. Hardening and tests; 10. optional offline; 11. EAS release
 
 ## Database rules (Supabase)
@@ -94,6 +96,10 @@ npx tsc --noEmit        # must stay clean
 - Error codes come back as the message of the Postgres error: `insufficient_stock` (detail = product name), `expiry_required`, `invalid_quantity`, `product_not_found`, `empty_sale`, `not_authenticated`, `forbidden`, `last_owner`.
 - Change the schema only with a new migration file (`npx supabase migration new name`), then `npx supabase db push --linked`. Never edit an applied migration. No Docker here: test against the linked project with the rollback test above.
 - Qty in `product_stock` counts only non-expired batches; `expired_qty` is stock past its expiry date. `batches.quantity >= 0` is enforced; offline selling would need to relax this (see `docs/OFFLINE_SELLING.md`).
+
+- Team: `profiles` also holds `email` (copied by the trigger) and `active`. Accounts are created, passwords reset and users (de)activated ONLY by the edge function `supabase/functions/manage-staff` (needs the service key, which exists only on the server; it first checks `is_owner()`). Deploy: `npx supabase functions deploy manage-staff --use-api --project-ref ljpbqmngwvsjitlfhljr`. Roles change through `set_user_role`. Deactivating bans the user (no new sessions); an already issued token can keep working until it expires (about 1 hour).
+- `app_settings` is a single row (`expiry_alert_days`, 1 to 365): everyone reads, only the owner updates. The app reads it with `useSettings()` and passes `expiryDays` to the services; the constant `EXPIRY_ALERT_DAYS` is only the default.
+- Tests: `team_settings.sql` (11 checks) on top of `stock_logic`, `app_support`, `product_admin`. Run all four after any schema change.
 
 ## Rules
 - Android is edge-to-edge, so the keyboard does not resize the window. Any screen with text fields must use `components/KeyboardScrollView` (never `ScrollView` or `KeyboardAvoidingView`); `KeyboardProvider` wraps the app in `app/_layout.jsx`. On full-screen forms without a header, put a fixed `View` of height `insets.top` above the scroll view so the content never scrolls under the status bar (see `components/Form.jsx`). Do not upgrade the keyboard library without regenerating the patch; reference: `C:\workspace\Project_manager\docs\PM_KEYBOARD_CONTEXT.md`.

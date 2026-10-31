@@ -48,6 +48,7 @@ function RootNavigator() {
         <Stack.Screen name="medicins" />
         <Stack.Screen name="saleDetail" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="team" />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="(auth)" />

@@ -3,9 +3,9 @@ import { EXPIRY_ALERT_DAYS, localDateString } from "@/tools/stock";
 
 export const PAGE_SIZE = 30;
 
-function soonDate() {
+function soonDate(days) {
   const d = new Date();
-  d.setDate(d.getDate() + EXPIRY_ALERT_DAYS);
+  d.setDate(d.getDate() + days);
   return localDateString(d);
 }
 
@@ -18,6 +18,7 @@ export async function fetchProductPage({
   filter = "all",
   page = 0,
   pageSize = PAGE_SIZE,
+  expiryDays = EXPIRY_ALERT_DAYS,
 }) {
   let req = supabase
     .from("product_stock")
@@ -29,7 +30,7 @@ export async function fetchProductPage({
   const text = sanitize(query);
   if (text) req = req.or(`name.ilike.%${text}%,barcode.ilike.%${text}%`);
   if (filter === "low") req = req.eq("is_low", true);
-  if (filter === "expiring") req = req.lte("earliest_expiry", soonDate());
+  if (filter === "expiring") req = req.lte("earliest_expiry", soonDate(expiryDays));
 
   const { data, error } = await req;
   if (error) throw error;

@@ -17,6 +17,7 @@ import LoadingState from "@/components/LoadingState";
 import ScreenHeader from "@/components/ScreenHeader";
 import { colors, font, spacing } from "@/constants/theme";
 import { useAuth } from "@/lib/auth";
+import { useSettings } from "@/lib/settings";
 import { fetchDashboard } from "@/services/dashboard";
 import { formatDA, formatExpiry, isExpiringSoon } from "@/tools/stock";
 
@@ -25,9 +26,10 @@ const OVERLAP = 28;
 export default function Home() {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
+  const { expiryDays } = useSettings();
   const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: fetchDashboard,
+    queryKey: ["dashboard", expiryDays],
+    queryFn: () => fetchDashboard(expiryDays),
   });
 
   const date = new Date().toLocaleDateString(i18n.language, {
@@ -94,7 +96,7 @@ export default function Home() {
                 onPress={() => router.push({ pathname: "/medicins", params: { id: p.id } })}
               >
                 <Text style={styles.name}>{p.name}</Text>
-                {isExpiringSoon(p) ? (
+                {isExpiringSoon(p, expiryDays) ? (
                   <Badge
                     label={t("expiresOn", { date: formatExpiry(p.earliest_expiry) })}
                     tone="danger"

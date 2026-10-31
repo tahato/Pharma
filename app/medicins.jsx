@@ -15,10 +15,10 @@ import ScreenHeader from "@/components/ScreenHeader";
 import StockAdjustSheet from "@/components/StockAdjustSheet";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/lib/auth";
+import { useSettings } from "@/lib/settings";
 import { fetchProduct, productImageUrl } from "@/services/products";
 import {
   daysUntil,
-  EXPIRY_ALERT_DAYS,
   formatDA,
   formatExpiry,
   stockStatus,
@@ -34,6 +34,7 @@ export default function Medicins() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams();
   const { isOwner } = useAuth();
+  const { expiryDays } = useSettings();
   const [sheet, setSheet] = useState(null); // "add" | "remove" | null
   const { data: product, isPending, isError, error, refetch } = useQuery({
     queryKey: ["product", id],
@@ -99,7 +100,7 @@ export default function Medicins() {
                 <Text style={styles.body}>{t("boxes", { count: b.quantity })}</Text>
                 <Badge
                   label={t("expiresOn", { date: formatExpiry(b.expiry_date) })}
-                  tone={daysUntil(b.expiry_date) <= EXPIRY_ALERT_DAYS ? "danger" : "success"}
+                  tone={daysUntil(b.expiry_date) <= expiryDays ? "danger" : "success"}
                 />
               </Card>
             ))}
