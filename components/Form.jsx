@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -11,28 +12,60 @@ import { colors, font, hairline, radius, spacing } from "@/constants/theme";
 import { useAuth } from "@/lib/auth";
 import { errorKey } from "@/services/errors";
 
-// Sign-in form. Accounts are created by the owner (public sign-ups are off).
-export default function Form() {
+// Sign-in and registration. The first account ever created becomes the owner
+// (database trigger); every later account is an active employee.
+export default function Form({ mode = "login" }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
+  const isRegister = mode === "register";
+
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
+
+  const validate = () => {
+    if (!email.trim() || !password) return t("loginAlert");
+    if (!isRegister) return null;
+    if (!fullName.trim()) return t("errRequired");
+    if (password.length < 8) return t("errWeakPassword");
+    if (password !== confirmPassword) return t("errPasswordMismatch");
+    return null;
+  };
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password) {
-      setError(t("loginAlert"));
+    const problem = validate();
+    if (problem) {
+      setError(problem);
       return;
     }
     setLoading(true);
     setError(null);
-    const { error: signInError } = await signIn(email.trim(), password);
+    setNotice(null);
+    const result = isRegister
+      ? await signUp(email.trim(), password, fullName.trim())
+      : await signIn(email.trim(), password);
     setLoading(false);
-    // On success the route guard moves the app to the tabs by itself.
-    if (signInError) setError(t(errorKey(signInError)));
+    if (result.error) {
+      setError(t(errorKey(result.error)));
+    } else if (isRegister && !result.data?.session) {
+      // The project asks for e-mail confirmation: no session until it is done.
+      setNotice(t("checkEmail"));
+    }
+    // With a session, the route guard moves the app to the tabs by itself.
+  };
+
+  const passwordProps = {
+    leftIcon: "lock-outline",
+    icon: showPassword ? "eye-off-outline" : "eye-outline",
+    onIconPress: () => setShowPassword(!showPassword),
+    placeholder: t("pswPlaceholder"),
+    secureTextEntry: !showPassword,
   };
 
   return (
@@ -56,7 +89,9 @@ export default function Form() {
         </View>
 
         <Text style={styles.title}>{t("appTitle")}</Text>
-        <Text style={styles.subtitle}>{t("loginSubtitle")}</Text>
+        <Text style={styles.subtitle}>
+          {t(isRegister ? "registerSubtitle" : "loginSubtitle")}
+        </Text>
 
         <View style={styles.card}>
           {error ? (
@@ -65,6 +100,24 @@ export default function Form() {
               <Text style={styles.bannerText}>{error}</Text>
             </View>
           ) : null}
+          {notice ? (
+            <View style={[styles.banner, styles.notice]}>
+              <MaterialCommunityIcons name="email-check-outline" size={20} color={colors.primaryDark} />
+              <Text style={[styles.bannerText, { color: colors.primaryDark }]}>{notice}</Text>
+            </View>
+          ) : null}
+
+          {isRegister && (
+            <View style={styles.group}>
+              <Text style={styles.label}>{t("fullName")}</Text>
+              <TextField
+                leftIcon="account-outline"
+                placeholder={t("fullName")}
+                value={fullName}
+                onChangeText={setFullName}
+              />
+            </View>
+          )}
 
           <View style={styles.group}>
             <Text style={styles.label}>{t("emailLabel")}</Text>
@@ -81,27 +134,41 @@ export default function Form() {
 
           <View style={styles.group}>
             <Text style={styles.label}>{t("psw")}</Text>
-            <TextField
-              leftIcon="lock-outline"
-              icon={showPassword ? "eye-off-outline" : "eye-outline"}
-              onIconPress={() => setShowPassword(!showPassword)}
-              placeholder={t("pswPlaceholder")}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
+            <TextField {...passwordProps} value={password} onChangeText={setPassword} />
           </View>
 
-          <Button title={t("login")} onPress={handleSubmit} loading={loading} />
-          <Text
-            style={styles.link}
-            onPress={() => Alert.alert(t("forgotPassword"), t("forgotPasswordHelp"))}
-          >
-            {t("forgotPassword")}
-          </Text>
+          {isRegister && (
+            <View style={styles.group}>
+              <Text style={styles.label}>{t("Cpsw")}</Text>
+              <TextField
+                {...passwordProps}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+            </View>
+          )}
+
+          <Button
+            title={t(isRegister ? "register" : "login")}
+            onPress={handleSubmit}
+            loading={loading}
+          />
+          {!isRegister && (
+            <Text
+              style={styles.link}
+              onPress={() => Alert.alert(t("forgotPassword"), t("forgotPasswordHelp"))}
+            >
+              {t("forgotPassword")}
+            </Text>
+          )}
         </View>
 
-        <Text style={styles.help}>{t("noAccountHelp")}</Text>
+        <Text
+          style={styles.switch}
+          onPress={() => router.replace(isRegister ? "/login" : "/register")}
+        >
+          {t(isRegister ? "haveAccount" : "noAccount")}
+        </Text>
         <Text style={styles.footer}>{t("footer")}</Text>
       </KeyboardScrollView>
     </View>
@@ -152,6 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerBg,
     borderRadius: radius.input,
   },
+  notice: { backgroundColor: colors.primaryTint },
   bannerText: { flex: 1, color: colors.danger, fontSize: font.body },
   group: { gap: spacing.sm },
   label: { fontSize: font.body, fontWeight: "500", color: colors.text },
@@ -161,11 +229,13 @@ const styles = StyleSheet.create({
     fontSize: font.body,
     fontWeight: "500",
   },
-  help: {
+  switch: {
     marginTop: spacing.lg,
     textAlign: "center",
-    color: colors.textSecondary,
-    fontSize: font.small,
+    color: colors.primaryDark,
+    fontSize: font.body,
+    fontWeight: "500",
+    padding: spacing.sm,
   },
   footer: {
     marginTop: "auto",

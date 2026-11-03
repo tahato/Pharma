@@ -9,6 +9,11 @@ export function errorKey(error) {
     return "errNetwork";
   }
   if (/invalid login credentials/i.test(message)) return "errInvalidLogin";
+  if (/user already registered|already been registered/i.test(message)) return "errEmailExists";
+  if (/password should be at least|weak.password/i.test(message)) return "errWeakPassword";
+  if (/signups not allowed/i.test(message)) return "errSignupsClosed";
+  if (/rate limit|too many requests/i.test(message)) return "errTooMany";
+  if (/unable to validate email|invalid format/i.test(message)) return "errInvalidEmail";
   if (message === "insufficient_stock") return "errInsufficientStock";
   if (message === "expiry_required") return "errExpiryRequired";
   if (message === "product_not_found") return "errProductNotFound";

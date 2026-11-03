@@ -98,7 +98,6 @@
   "minStock": "Stock minimum",
   "noBatches": "Aucun lot en stock.",
   "forgotPasswordHelp": "Demandez au propriétaire de la pharmacie de réinitialiser votre mot de passe.",
-  "noAccountHelp": "Pas de compte ? Demandez au propriétaire de la pharmacie d'en créer un.",
   "saleSaved": "Vente enregistrée",
   "saleDetail": "Détail de la vente",
   "addStockTitle": "Ajouter du stock",
@@ -135,5 +134,14 @@
   "errTargetOwner": "Passez d'abord ce compte en employé.",
   "errLastOwner": "Il doit rester au moins un propriétaire.",
   "errDaysRange": "Entrez un nombre entre 1 et 365.",
-  "latestOnly": "Les {{count}} dernières ventes sont affichées."
+  "latestOnly": "Les {{count}} dernières ventes sont affichées.",
+  "register": "S'inscrire",
+  "registerSubtitle": "Créez votre compte pour gérer votre stock et vos ventes",
+  "Cpsw": "Confirmer le mot de passe",
+  "haveAccount": "Déjà un compte ? Se connecter",
+  "noAccount": "Pas de compte ? S'inscrire",
+  "errPasswordMismatch": "Les mots de passe ne correspondent pas.",
+  "errSignupsClosed": "L'inscription est désactivée. Contactez le propriétaire.",
+  "errTooMany": "Trop de tentatives. Réessayez dans quelques minutes.",
+  "checkEmail": "Un e-mail de confirmation vous a été envoyé. Confirmez-le, puis connectez-vous."
 }

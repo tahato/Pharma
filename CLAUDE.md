@@ -25,7 +25,7 @@ Database tests (rollback SQL, run after any schema change): `npx supabase db que
 | Path | Role |
 |---|---|
 | `app/_layout.jsx` | Providers (Query, Auth, Keyboard, Gesture) + route guard: `Stack.Protected` shows `(auth)` when signed out and the app when signed in |
-| `app/(auth)/login.jsx` | Sign-in screen (renders `components/Form`). No register screen: sign-ups are disabled |
+| `app/(auth)/login.jsx`, `register.jsx` | Sign-in and registration (both render `components/Form` with `mode`). Register: name, e-mail, password (8+), confirm |
 | `app/(tabs)/_layout.tsx` | 4 bottom tabs: `index` (Accueil), `stock`, `vente`, `historique` |
 | `app/(tabs)/index.jsx` | Dashboard from `services/dashboard.js`: today's sales, low-stock and expiring counters (tap -> filtered Stock), watch list, avatar -> settings |
 | `app/(tabs)/stock.jsx` | Infinite list of `product_stock` (server-side search, filters `?filter=low\|expiring`), barcode scan, FAB -> `/addProducts` |
@@ -36,7 +36,7 @@ Database tests (rollback SQL, run after any schema change): `npx supabase db que
 | `app/addProducts.jsx` | New product (validation, barcode scan, month/year expiry, photo camera/gallery) -> photo upload + `create_product`. Opened with `?id=` it edits the product (owner only: `update_product`, quantity/expiry hidden) and offers "Supprimer" (`archive_product`) |
 | `app/settings.jsx` | Profile and role, language toggle (fr/en), Équipe (owner), expiry alert window (owner edits it in a sheet, staff read it), sign out |
 | `app/team.jsx` | Owner only: team list; FAB creates an employee (`CreateStaffSheet`), tap a member for `MemberSheet` (reset password, owner/staff role, deactivate/reactivate) |
-| `components/` | `KeyboardScrollView`, `ScreenHeader`, `Button` (has `loading`), `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `LoadingState`, `ErrorState`, `BarcodeScanner`, `MonthYearPicker`, `StockAdjustSheet`, `BottomSheet` (generic keyboard-safe sheet), `CreateStaffSheet`, `MemberSheet`, `Form` (sign-in) |
+| `components/` | `KeyboardScrollView`, `ScreenHeader`, `Button` (has `loading`), `Card`, `Badge`, `Chip`, `TextField`, `SearchBar`, `Stepper`, `ProductRow`, `DetailField`, `EmptyState`, `LoadingState`, `ErrorState`, `BarcodeScanner`, `MonthYearPicker`, `StockAdjustSheet`, `BottomSheet` (generic keyboard-safe sheet), `CreateStaffSheet`, `MemberSheet`, `Form` (sign-in and register) |
 | `services/` | `products.js`, `sales.js`, `dashboard.js`, `team.js`, `settings.js` (all Supabase calls), `errors.js` (error -> translation key), `invalidate.js` (query invalidation after stock/sales changes) |
 | `lib/` | `supabase.js` (client), `auth.jsx` (AuthProvider, `useAuth`: session, profile, `isOwner`), `queryClient.js`, `settings.js` (`useSettings()` -> `expiryDays`, default 30), `useDebounce.js` |
 | `constants/theme.ts` | Design tokens: `colors`, `spacing`, `radius`, `font`, `hairline` |
@@ -46,7 +46,7 @@ Database tests (rollback SQL, run after any schema change): `npx supabase db que
 
 ## Decisions
 - **Backend**: Supabase (Postgres) over Firebase, because stock, batches, expiry and sales are relational and need transactions and reports.
-- **Public sign-ups must be disabled** in Supabase (decided 2026-10-29; confirmed done: `disable_signup: true` in the project's auth settings; anonymous sign-ins off, email auto-confirm on). Only the owner creates staff accounts (dashboard now, in-app "Équipe" later). The register screen was removed; the sign-in screen tells users to ask the owner.
+- **Open registration** (decided 2026-11, replaces the earlier plan to disable sign-ups): anyone can register from the app's register screen. The FIRST account ever created becomes the owner (trigger `handle_new_user`); every later one is an active employee with no approval step. The owner can still deactivate accounts, reset passwords and change roles in Équipe. Supabase must have "Allow new users to sign up" ON and, for instant activation, "Confirm email" OFF (the register screen also handles the confirmation case with a notice). Risk accepted by the owner: anyone with the app can create an account and see stock and sales; register the owner account BEFORE sharing the app, because the first registrant becomes owner.
 - **Online-first**: every action goes through Supabase. Offline selling is deferred; see `docs/OFFLINE_SELLING.md` for the plan, conflict policy and what to prepare now (service layer, idempotent `create_sale` with a client-generated sale id).
 - **One pharmacy** for now; add `pharmacy_id` to tables only if multi-pharmacy is ever needed.
 - **Design**: blue-teal, light only, phone first (`DESIGN.md`). Android is edge-to-edge with the patched keyboard library (see Rules).
@@ -58,12 +58,12 @@ Database tests (rollback SQL, run after any schema change): `npx supabase db que
 - A **product** is a kind of medicine; a **batch** is a delivery with its own quantity and expiry date. Product quantity = sum of its batches.
 
 ## Current state
-- Everything is wired to Supabase: sign-in/out with a persisted session, stock list/search/filters, product creation (with photo), Ajouter/Déstocker, sales through `create_sale`, history, sale detail, dashboard counters.
+- Everything is wired to Supabase: register, sign-in/out with a persisted session, stock list/search/filters, product creation (with photo), Ajouter/Déstocker, sales through `create_sale`, history, sale detail, dashboard counters.
 - **Verified**: database functions and permissions (`supabase/tests/*.sql`), anonymous access refused, TypeScript, lint, Android bundle. **Not yet verified**: the app against the live database with a real signed-in account, photo upload, the keyboard fix and the barcode scanner on a device. Test these first.
-- Needs the first account: create the owner in the Supabase dashboard (Authentication > Users > Add user, Auto Confirm). The first account becomes the owner.
+- Needs the first account: register the owner from the app's register screen BEFORE sharing the app (the first account becomes the owner).
 - Edit and delete (archive) product: done, owner only.
 - Team management (create employees, reset passwords, change roles, deactivate) and the editable expiry window: done, owner only.
-- Not done: password reset by e-mail (the sign-in screen tells users to ask the owner), per-product minimum is the only low-stock threshold, offline selling (deferred).
+- Not done: password reset by e-mail (the sign-in screen tells users to ask the owner, who resets it in Équipe), per-product minimum is the only low-stock threshold, offline selling (deferred).
 
 ## Conventions
 - Components are PascalCase function components (hooks require it; lint enforces).
@@ -81,10 +81,10 @@ Database tests (rollback SQL, run after any schema change): `npx supabase db que
 ## Roadmap (Supabase backend)
 0. Front-end cleanup: **done**
 0b. Blue-teal redesign on mock data: **done**
-1. Supabase project, `.env` (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY` = publishable key), CLI + migrations: **done** (CLI logged in and linked to project `pharma`, eu-central-1, Postgres 17; public sign-ups off)
+1. Supabase project, `.env` (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY` = publishable key), CLI + migrations: **done** (CLI logged in and linked to project `pharma`, eu-central-1, Postgres 17)
 2. Schema: **done and live** on the project (migrations in `supabase/migrations/`: tables `profiles`, `products`, `batches`, `sales`, `sale_items`, `stock_movements`; view `product_stock`; RLS; functions `adjust_stock`, `create_sale` (FEFO, idempotent on sale id, prices from the server, expired batches never sold), `set_user_role`; public bucket `product-images`). Migration `20261031100000_app_support.sql` adds `is_low` and `earliest_expiry` to `product_stock` and the `create_product` function. Tested by `supabase/tests/stock_logic.sql` (29 checks) and `app_support.sql` (13 checks), both roll back: `npx supabase db query --linked -f supabase/tests/<file>.sql` prints `TESTS_PASSED`.
 3. Client, service layer, TanStack Query, loading/error states; mock data removed: **done**
-4. Auth (sign-in form, `AuthProvider`, route guard, sign out; register screen removed): **done**
+4. Auth (sign-in and register, `AuthProvider`, route guard, sign out): **done**
 5. Stock screens on real data (list, search, add, detail, image upload, Ajouter/Déstocker): **done** (edit and delete/archive included)
 6. Sales: checkout via `create_sale`, barcode scan, sale detail: **done**
 7. Dashboard on real data: **done** (counters and watch list; push notifications not planned)

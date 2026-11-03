@@ -98,7 +98,6 @@
   "minStock": "Minimum stock",
   "noBatches": "No batches in stock.",
   "forgotPasswordHelp": "Ask the pharmacy owner to reset your password.",
-  "noAccountHelp": "No account? Ask the pharmacy owner to create one.",
   "saleSaved": "Sale saved",
   "saleDetail": "Sale details",
   "addStockTitle": "Add stock",
@@ -135,5 +134,14 @@
   "errTargetOwner": "Make this account staff first.",
   "errLastOwner": "At least one owner must remain.",
   "errDaysRange": "Enter a number between 1 and 365.",
-  "latestOnly": "Showing the latest {{count}} sales."
+  "latestOnly": "Showing the latest {{count}} sales.",
+  "register": "Register",
+  "registerSubtitle": "Create your account to manage your stock and sales",
+  "Cpsw": "Confirm password",
+  "haveAccount": "Already have an account? Sign in",
+  "noAccount": "Don't have an account? Register",
+  "errPasswordMismatch": "The passwords do not match.",
+  "errSignupsClosed": "Registration is turned off. Contact the owner.",
+  "errTooMany": "Too many attempts. Try again in a few minutes.",
+  "checkEmail": "A confirmation e-mail was sent. Confirm it, then sign in."
 }

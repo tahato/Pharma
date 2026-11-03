@@ -44,6 +44,9 @@ export function AuthProvider({ children }) {
     isOwner: profile.data?.role === "owner",
     signIn: (email, password) =>
       supabase.auth.signInWithPassword({ email, password }),
+    // The database trigger makes the first account the owner and later ones active staff.
+    signUp: (email, password, fullName) =>
+      supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } }),
     signOut: () => supabase.auth.signOut(),
   };
 
