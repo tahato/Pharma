@@ -1,15 +1,14 @@
 import { supabase } from "@/lib/supabase";
+import { fetchSalesSummary } from "@/services/sales";
 import { EXPIRY_ALERT_DAYS, localDateString } from "@/tools/stock";
 
 export async function fetchDashboard(expiryDays = EXPIRY_ALERT_DAYS) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
   const soon = new Date();
   soon.setDate(soon.getDate() + expiryDays);
   const soonDate = localDateString(soon);
 
   const [sales, low, expiring, watch] = await Promise.all([
-    supabase.from("sales").select("total").gte("created_at", start.toISOString()),
+    fetchSalesSummary(0),
     supabase.from("product_stock").select("id", { count: "exact", head: true }).eq("is_low", true),
     supabase
       .from("product_stock")
@@ -22,11 +21,11 @@ export async function fetchDashboard(expiryDays = EXPIRY_ALERT_DAYS) {
       .order("name")
       .limit(5),
   ]);
-  for (const r of [sales, low, expiring, watch]) if (r.error) throw r.error;
+  for (const r of [low, expiring, watch]) if (r.error) throw r.error;
 
   return {
-    todayTotal: sales.data.reduce((sum, s) => sum + Number(s.total), 0),
-    todayCount: sales.data.length,
+    todayTotal: sales.total,
+    todayCount: sales.count,
     lowCount: low.count ?? 0,
     expiringCount: expiring.count ?? 0,
     watch: watch.data,

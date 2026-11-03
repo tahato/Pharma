@@ -72,13 +72,13 @@ export function productImageUrl(path) {
 }
 
 async function uploadProductImage(uri) {
-  const extension = (uri.split(".").pop() ?? "jpg").toLowerCase().split("?")[0];
-  const contentType = extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg";
-  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension === "jpg" ? "jpg" : extension}`;
+  const ext = (uri.split("?")[0].split(".").pop() ?? "").toLowerCase();
+  const type = ext === "png" ? "png" : ext === "webp" ? "webp" : "jpeg";
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${type === "jpeg" ? "jpg" : type}`;
   const body = await (await fetch(uri)).arrayBuffer();
   const { error } = await supabase.storage
     .from("product-images")
-    .upload(path, body, { contentType });
+    .upload(path, body, { contentType: `image/${type}` });
   if (error) throw error;
   return path;
 }

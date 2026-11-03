@@ -11,7 +11,7 @@ import ErrorState from "@/components/ErrorState";
 import LoadingState from "@/components/LoadingState";
 import ScreenHeader from "@/components/ScreenHeader";
 import { colors, font, spacing } from "@/constants/theme";
-import { fetchSales } from "@/services/sales";
+import { fetchSales, SALES_LIST_LIMIT } from "@/services/sales";
 import { formatDA } from "@/tools/stock";
 
 const PERIODS = [
@@ -29,8 +29,7 @@ export default function Historique() {
     queryKey: ["sales", period],
     queryFn: () => fetchSales(days),
   });
-  const sales = data ?? [];
-  const total = sales.reduce((sum, s) => sum + Number(s.total), 0);
+  const sales = data?.sales ?? [];
 
   const when = (iso) => {
     const d = new Date(iso);
@@ -63,8 +62,11 @@ export default function Historique() {
             </View>
             {data && (
               <Text style={styles.summary}>
-                {t("salesCount", { count: sales.length })} · {formatDA(total)}
+                {t("salesCount", { count: data.summary.count })} · {formatDA(data.summary.total)}
               </Text>
+            )}
+            {data && data.summary.count > SALES_LIST_LIMIT && (
+              <Text style={styles.summary}>{t("latestOnly", { count: SALES_LIST_LIMIT })}</Text>
             )}
           </View>
         }

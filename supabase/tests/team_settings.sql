@@ -10,6 +10,12 @@ declare
   checks integer := 0;
 begin
   insert into auth.users (id, email) values (a, 'owner-test@example.invalid'), (b, 'staff-test@example.invalid');
+
+  -- the trigger function is not exposed as an API call
+  assert not has_function_privilege('anon', 'public.handle_new_user()', 'execute'), 'anon cannot call it';
+  assert not has_function_privilege('authenticated', 'public.handle_new_user()', 'execute'), 'signed-in users cannot call it';
+  assert exists (select 1 from public.profiles where id = a) and exists (select 1 from public.profiles where id = b), 'the trigger still creates profiles';
+  checks := checks + 3;
   assert (select email from public.profiles where id = a) = 'owner-test@example.invalid', 'email copied to the profile';
   assert (select active from public.profiles where id = b), 'new accounts are active';
   checks := checks + 2;

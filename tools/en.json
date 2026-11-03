@@ -134,5 +134,6 @@
   "errSelfAction": "Not possible on your own account.",
   "errTargetOwner": "Make this account staff first.",
   "errLastOwner": "At least one owner must remain.",
-  "errDaysRange": "Enter a number between 1 and 365."
+  "errDaysRange": "Enter a number between 1 and 365.",
+  "latestOnly": "Showing the latest {{count}} sales."
 }

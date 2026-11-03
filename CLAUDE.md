@@ -17,7 +17,9 @@ npm install
 npx expo start          # then a / i / w, or scan with Expo Go
 npx expo lint           # must stay clean
 npx tsc --noEmit        # must stay clean
+npm test                # Jest (jest-expo): stock helpers, error mapping, translations
 ```
+Database tests (rollback SQL, run after any schema change): `npx supabase db query --linked -f supabase/tests/<file>.sql` for `stock_logic`, `app_support`, `product_admin`, `team_settings`; each must print `TESTS_PASSED`. Security/performance check: `npx supabase db advisors --linked` (the only expected warnings are the 7 `SECURITY DEFINER` functions the app must call as a signed-in user; each checks the caller itself).
 
 ## Structure
 | Path | Role |
@@ -87,7 +89,8 @@ npx tsc --noEmit        # must stay clean
 6. Sales: checkout via `create_sale`, barcode scan, sale detail: **done**
 7. Dashboard on real data: **done** (counters and watch list; push notifications not planned)
 8. Roles (owner/staff), team management, editable expiry window: **done**
-9. Hardening and tests; 10. optional offline; 11. EAS release
+9. Hardening and tests: **in progress** (done: advisor review and fix, sales totals fix, Jest tests for helpers/errors/translations, 78 SQL checks; to do: a real-account try-out on a device; dashboard settings below). 10. optional offline; 11. EAS release
+   - Supabase dashboard items to set by hand: minimum password length 8 (Authentication > Sign In / Providers > Email); consider shorter JWT expiry if instant deactivation matters; backups: the free plan has none, paid plans have daily backups, so decide before real data goes in.
 
 ## Database rules (Supabase)
 - "Deleting" a product ARCHIVES it (`products.archived_at`, function `archive_product`): `product_stock`, search, scans, `create_sale` and `adjust_stock` ignore archived products, but sales and movements keep their history. A barcode is unique only among active products. `update_product` and `archive_product` are owner-only and raise `forbidden` for staff. Test: `supabase/tests/product_admin.sql` (20 checks).
@@ -99,7 +102,9 @@ npx tsc --noEmit        # must stay clean
 
 - Team: `profiles` also holds `email` (copied by the trigger) and `active`. Accounts are created, passwords reset and users (de)activated ONLY by the edge function `supabase/functions/manage-staff` (needs the service key, which exists only on the server; it first checks `is_owner()`). Deploy: `npx supabase functions deploy manage-staff --use-api --project-ref ljpbqmngwvsjitlfhljr`. Roles change through `set_user_role`. Deactivating bans the user (no new sessions); an already issued token can keep working until it expires (about 1 hour).
 - `app_settings` is a single row (`expiry_alert_days`, 1 to 365): everyone reads, only the owner updates. The app reads it with `useSettings()` and passes `expiryDays` to the services; the constant `EXPIRY_ALERT_DAYS` is only the default.
-- Tests: `team_settings.sql` (11 checks) on top of `stock_logic`, `app_support`, `product_admin`. Run all four after any schema change.
+- Totals (history header, dashboard today) come from `sales_summary(p_from)` so they stay right with any number of sales; the sales list loads only the latest 200 of a period (`SALES_LIST_LIMIT`).
+- `handle_new_user` is a trigger function: EXECUTE is revoked from public/anon/authenticated so it is not an API endpoint. Create the very first account after any change to it and check that a profile appears (the test login cannot reproduce the auth service's own insert).
+- Tests: `stock_logic` (29), `app_support` (15), `product_admin` (20), `team_settings` (14) = 78 checks.
 
 ## Rules
 - Android is edge-to-edge, so the keyboard does not resize the window. Any screen with text fields must use `components/KeyboardScrollView` (never `ScrollView` or `KeyboardAvoidingView`); `KeyboardProvider` wraps the app in `app/_layout.jsx`. On full-screen forms without a header, put a fixed `View` of height `insets.top` above the scroll view so the content never scrolls under the status bar (see `components/Form.jsx`). Do not upgrade the keyboard library without regenerating the patch; reference: `C:\workspace\Project_manager\docs\PM_KEYBOARD_CONTEXT.md`.

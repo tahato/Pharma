@@ -37,6 +37,14 @@ begin
   assert r.earliest_expiry = current_date - 3, 'earliest expiry includes expired batches';
   checks := checks + 2;
 
+  -- sales summary is computed by the database
+  perform public.create_sale(jsonb_build_array(jsonb_build_object('product_id', p, 'quantity', 1)));
+  select * into r from public.sales_summary(current_date::timestamptz - interval '1 day');
+  assert r.sales_count = 1 and r.total = 100, format('summary: %s %s', r.sales_count, r.total);
+  select * into r from public.sales_summary(now() + interval '1 day');
+  assert r.sales_count = 0 and r.total = 0, 'nothing in the future';
+  checks := checks + 2;
+
   -- product without stock; empty barcode becomes null
   p := public.create_product('No stock', '', null);
   select * into r from public.product_stock where id = p;

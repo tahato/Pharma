@@ -134,5 +134,6 @@
   "errSelfAction": "Impossible sur votre propre compte.",
   "errTargetOwner": "Passez d'abord ce compte en employé.",
   "errLastOwner": "Il doit rester au moins un propriétaire.",
-  "errDaysRange": "Entrez un nombre entre 1 et 365."
+  "errDaysRange": "Entrez un nombre entre 1 et 365.",
+  "latestOnly": "Les {{count}} dernières ventes sont affichées."
 }
