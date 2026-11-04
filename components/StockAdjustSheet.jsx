@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "@/components/Button";
 import Chip from "@/components/Chip";
 import KeyboardScrollView from "@/components/KeyboardScrollView";
@@ -17,6 +18,7 @@ import { formatExpiry } from "@/tools/stock";
 export default function StockAdjustSheet({ visible, mode, product, onClose }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [qty, setQty] = useState("");
   const [expiry, setExpiry] = useState(null);
   const [reason, setReason] = useState("adjustment");
@@ -68,7 +70,7 @@ export default function StockAdjustSheet({ visible, mode, product, onClose }) {
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <KeyboardScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, { paddingBottom: spacing.xl + insets.bottom }]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
           >

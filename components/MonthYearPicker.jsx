@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, font, hairline, radius, spacing } from "@/constants/theme";
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -10,6 +11,7 @@ const pad = (n) => String(n).padStart(2, "0");
 // "YYYY-MM-DD" (the format of the database `date` columns).
 export default function MonthYearPicker({ visible, value, onChange, onClose }) {
   const { i18n } = useTranslation();
+  const insets = useSafeAreaInsets();
   const now = new Date();
   const selected = value ? new Date(`${value}T12:00:00`) : null;
   const [year, setYear] = useState((selected ?? now).getFullYear());
@@ -30,7 +32,7 @@ export default function MonthYearPicker({ visible, value, onChange, onClose }) {
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: spacing.xl + insets.bottom }]}>
         <View style={styles.handle} />
         <View style={styles.yearRow}>
           <Pressable

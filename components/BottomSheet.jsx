@@ -1,10 +1,12 @@
 import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import KeyboardScrollView from "@/components/KeyboardScrollView";
 import { colors, radius, spacing } from "@/constants/theme";
 
 // Modal sheet anchored to the bottom. Its content scrolls above the keyboard.
 // Edge-to-edge flags are required by the keyboard library on Android.
 export default function BottomSheet({ visible, onClose, children }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal
       transparent
@@ -19,7 +21,7 @@ export default function BottomSheet({ visible, onClose, children }) {
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <KeyboardScrollView
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, { paddingBottom: spacing.xl + insets.bottom }]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
           >

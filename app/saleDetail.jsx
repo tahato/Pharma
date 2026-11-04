@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Card from "@/components/Card";
 import ErrorState from "@/components/ErrorState";
@@ -13,6 +14,7 @@ import { formatDA } from "@/tools/stock";
 export default function SaleDetail() {
   const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const { data: sale, isPending, isError, error, refetch } = useQuery({
     queryKey: ["sale", id],
     queryFn: () => fetchSale(id),
@@ -44,7 +46,7 @@ export default function SaleDetail() {
       {isPending && <LoadingState />}
       {isError && <ErrorState error={error} onRetry={refetch} />}
       {sale && (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: spacing.lg + insets.bottom }]}>
           <Card>
             {lines.map((l, i) => (
               <View key={`${l.name}-${i}`} style={styles.line}>

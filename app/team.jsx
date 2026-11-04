@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -27,6 +28,7 @@ const initials = (name) =>
 export default function Team() {
   const { t } = useTranslation();
   const { isOwner, session } = useAuth();
+  const insets = useSafeAreaInsets();
   const [creating, setCreating] = useState(false);
   const [selected, setSelected] = useState(null);
   const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
@@ -45,7 +47,7 @@ export default function Team() {
           <FlatList
             data={data ?? []}
             keyExtractor={(m) => m.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: 96 + insets.bottom }]}
             ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
             refreshing={isRefetching}
             onRefresh={refetch}
@@ -74,7 +76,7 @@ export default function Team() {
               </Card>
             )}
           />
-          <Pressable style={styles.fab} onPress={() => setCreating(true)}>
+          <Pressable style={[styles.fab, { bottom: spacing.lg + insets.bottom }]} onPress={() => setCreating(true)}>
             <MaterialCommunityIcons name="plus" size={28} color={colors.onPrimary} />
           </Pressable>
           <CreateStaffSheet visible={creating} onClose={() => setCreating(false)} />

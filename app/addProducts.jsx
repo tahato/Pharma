@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert, StyleSheet, Text, View } from "react-native";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import Button from "@/components/Button";
@@ -36,6 +37,7 @@ export default function AddProducts() {
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams();
   const editing = !!id;
+  const insets = useSafeAreaInsets();
 
   const [image, setImage] = useState();
   const [form, setForm] = useState({ minStock: "5" });
@@ -174,7 +176,7 @@ export default function AddProducts() {
       )}
       {(!editing || filled) && (
         <KeyboardScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: spacing.lg + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.photoRow}>

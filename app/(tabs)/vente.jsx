@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { randomUUID } from "expo-crypto";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Alert,
   Modal,
@@ -31,6 +32,7 @@ import { formatDA } from "@/tools/stock";
 export default function Vente() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState([]); // [{ product, qty }]
   const [confirming, setConfirming] = useState(false);
@@ -201,7 +203,7 @@ export default function Vente() {
         onRequestClose={() => setConfirming(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setConfirming(false)} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: spacing.xl + insets.bottom }]}>
           <View style={styles.handle} />
           <Text style={styles.sheetTitle}>{t("confirmSale")}</Text>
           {cart.map((l) => (

@@ -108,5 +108,6 @@ Database tests (rollback SQL, run after any schema change): `npx supabase db que
 
 ## Rules
 - Android is edge-to-edge, so the keyboard does not resize the window. Any screen with text fields must use `components/KeyboardScrollView` (never `ScrollView` or `KeyboardAvoidingView`); `KeyboardProvider` wraps the app in `app/_layout.jsx`. On full-screen forms without a header, put a fixed `View` of height `insets.top` above the scroll view so the content never scrolls under the status bar (see `components/Form.jsx`). Do not upgrade the keyboard library without regenerating the patch; reference: `C:\workspace\Project_manager\docs\PM_KEYBOARD_CONTEXT.md`.
+- Safe areas: screens do NOT use `<SafeAreaView>`; they use `useSafeAreaInsets()`. The top inset is added by `ScreenHeader` (and by the fixed spacer in `Form`); the bottom tab bar handles its own bottom inset. Anything that can sit at the bottom of a screen without the tab bar (stack screens, fixed action bars, FABs, scroll content, every Modal sheet, the scanner) must add `insets.bottom`, because Android is edge-to-edge and the navigation bar would cover it.
 - Never put the Supabase `service_role` key in the app or repo; only the anon key. Keep `.env` out of git.
 - Stock changes must go through server-side functions (transactions), never client-side read-modify-write.

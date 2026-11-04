@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Badge from "@/components/Badge";
 import BottomSheet from "@/components/BottomSheet";
@@ -84,6 +85,7 @@ export default function Settings() {
   const { t, i18n } = useTranslation();
   const { profile, isOwner, session, signOut } = useAuth();
   const { expiryDays } = useSettings();
+  const insets = useSafeAreaInsets();
   const [signingOut, setSigningOut] = useState(false);
   const [editingDays, setEditingDays] = useState(false);
 
@@ -106,7 +108,7 @@ export default function Settings() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title={t("settings")} onBack={() => router.back()} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: spacing.lg + insets.bottom }]}>
         <Card style={styles.profile}>
           <View style={styles.avatar}>
             <Text style={styles.initials}>{initials}</Text>

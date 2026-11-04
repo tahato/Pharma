@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
@@ -34,6 +35,7 @@ export default function Medicins() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams();
   const { isOwner } = useAuth();
+  const insets = useSafeAreaInsets();
   const { expiryDays } = useSettings();
   const [sheet, setSheet] = useState(null); // "add" | "remove" | null
   const { data: product, isPending, isError, error, refetch } = useQuery({
@@ -106,7 +108,7 @@ export default function Medicins() {
             ))}
           </ScrollView>
 
-          <View style={styles.actions}>
+          <View style={[styles.actions, { paddingBottom: spacing.md + insets.bottom }]}>
             <Button title={t("add")} style={{ flex: 1 }} onPress={() => setSheet("add")} />
             <Button
               title={t("unstock")}
